@@ -1,0 +1,5 @@
+SCREEN_SIZE = (800 , 600)
+SCREEN_NAME = "my Game"
+SCREEN_COLOR = (0,0,0)
+FPS = 1200
+IMAGE_ROOT = 'images\\'
