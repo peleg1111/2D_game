@@ -3,7 +3,8 @@ from const_class import *
 
 def main():
     manager = GameManager()
-    t = Tank(manager.screen, 300, 400, 25, 25, (0, 255, 0), 0.1, 1000)
+    t = Tank(manager.screen, 300, 400, TANK_SIZE, TANK_SIZE, TANK_HIT_BOX__COLOR,
+                                            TANK_SPEED, TANK_ATTACK_COOLDOWN, TANK_HP)
     manager.Add_player(t)
 
     while True:

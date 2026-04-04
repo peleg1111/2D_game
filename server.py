@@ -1,94 +1,258 @@
+"""
+            לוגיקה
+השרת שומר את המיקומים ההתחליים של השחקנים   1
+כאשר השחקנים שולחים הודעה השרת מחשב את המיקומים של הכל ושולח ללקוח   2
+הלקוח מקבל את המיקומים ומצייר את הלוח   3
+
+            שינויים
+לשנות את מנהל המשחק שיקבל דברים לפי פקודה ולא לפי המקלדת    1
+ליצור שרת שעל כל 2 שחקנים הוא פותח חדר ומעביר להם הודעות    2
+ליצור לקוח שמקבל הודעות ומעדכן את המשחק    3
+"""
+
+import socket ,time
+import threading
+
 from const import *
-from const_class import *
-import socket, threading
+
 
 class Server:
     def __init__(self):
-        self.socket = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.socket.bind(('0.0.0.0', 1234))
-
-        self.players = {}   # id : addr
+        self.socket = self.create_socket()
         self.rooms = []
-        self.next_ID = 0
+        self.players = []
+        self.run = True
+        self.lock = threading.Lock()
+        threading.Thread(target= self.del_empty_room, daemon= True).start()
 
-    def recv(self):
+    def wait_for_connection(self):
         while True:
-            data, addr = self.socket.recvfrom(1024)
-
-            # השחקן מבקש להצטרף למשחק
-            if data == START_GAME:
-                player_id = self.next_ID
-                self.players[player_id] = addr
-                self.next_ID += 1
-
-                self.socket.sendto(ACK, addr)
-
-                # חיפוש חדר עם שחקן אחד
-                for room in self.rooms:
-                    if room.num_of_players == 1:
-                        room.add_player(player_id, addr)
-                        return
-
-                # אם אין חדר פנוי יוצרים חדר חדש
-                room = Room(self.socket)
-                room.add_player(player_id, addr)
-                self.rooms.append(room)
-                room.start()
-                print(f"new client {addr = }")
-
+            data,addr = self.socket.recvfrom(1024)
+            print(f"{len(data)}|{addr}|{data}")
+            # אם השחקן לא מחובר
+            if addr not in self.players:
+                if data == START_GAME:
+                    with self.lock:
+                        self.players.append(addr)
+                        self.find_player_room(addr)
+                    self.socket.sendto(ACK,addr)
+                else:
+                    self.socket.sendto(CONNECTION_FAIL,addr)
             else:
-                # מציאת השחקן לפי כתובת
-                player_id = None
-                for pid, paddr in self.players.items():
-                    if paddr == addr:
-                        player_id = pid
-                        break
+                room = self.find_room(addr)
+                if not room:
+                    self.socket.sendto(CONNECTION_FAIL,addr)
+                else:
+                    room.handle_msg(addr,data)
+            self.print_server_state()
 
-                if player_id is None:
-                    continue
 
-                # שליחת הפקודה לחדר הנכון
+    def find_room(self,addr):
+        with self.lock:
+            for room in self.rooms:
+                if addr in room.players:
+                    return room
+        return None
+
+    def find_player_room(self, addr):
+        with self.lock:
+            # מחפשים חדר קיים עם מקום
+            for room in self.rooms:
+                if room.count_players < 2:
+                    room.add_player(addr)
+                    return
+
+            # יוצרים חדר חדש
+            room = Room(addr, self.socket)
+            self.rooms.append(room)
+            room.start()
+
+    def create_socket(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(('0.0.0.0', 1234))
+        return sock
+
+    def del_empty_room(self):
+        while self.run:
+            with self.lock:
                 for room in self.rooms:
-                    if player_id in room.players:
-                        room.handler(data, player_id)
-                        break
+                    if room.count_players == 0:
+                        self.rooms.remove(room)
+            time.sleep(3)
+
+    def print_server_state(self):
+        with self.lock:
+            print("\n========== SERVER STATE ==========")
+            print(f"total players: {len(self.players)}")
+            print(f"players: {self.players}")
+
+            print(f"total rooms: {len(self.rooms)}")
+            for i, room in enumerate(self.rooms):
+                print(f"\n--- room {i} ---")
+                print(f"players in room: {room.players}")
+                print(f"count players: {room.count_players}")
+
+                with room.lock:
+                    for addr, (playerData, attacks) in room.game_data.items():
+                        print(f" Player {addr}:")
+                        if playerData:
+                            print(
+                                f"   Pos: {playerData.pos.x},{playerData.pos.y}  Size:{playerData.pos.width}x{playerData.pos.height}  HP:{playerData.hp}")
+                        else:
+                            print("   No PLAYER_DATA yet")
+
+                        if attacks:
+                            print("   Attacks:")
+                            for atk in attacks:
+                                print(f"     Attack ID {atk.id}: Pos({atk.pos.x},{atk.pos.y}) Speed:{atk.speed}")
+                        else:
+                            print("   No attacks")
+
+            print("=================================\n")
 
 
 class Room(threading.Thread):
-    def __init__(self, socket):
+    def __init__(self, player , server_sock):
         threading.Thread.__init__(self)
-        self.socket = socket
-        self.players = {}  # id : addr
-        self.num_of_players = 0
-        self.cmd_queue = {}  # id : last_cmd
+        self.players = []
+        self.count_players = 0
+        self.add_player(player)
+        self.socket = server_sock
+        self.run = True
+        # addr : [ GAME_DATA , ATTACK_DATA[] ]
+        self.game_data = {}
+        self.lock = threading.Lock()
 
-    def add_player(self, player_id, addr):
-        self.players[player_id] = addr
-        self.num_of_players += 1
-
-    def handler(self, data, player_id):
-        self.cmd_queue[player_id] = data
+    def add_player(self,addr):
+        with self.lock:
+            self.players.append(addr)
+            self.count_players += 1
+            self.game_data[addr] = [None , []]
 
     def run(self):
-        self.game_manager = GameManager()
+        while self.run:
+            with self.lock:
+                count = self.count_players
+                players = self.players[:]
+                game_data = dict(self.game_data)
 
-        # יצירת טנקים לפי מספר השחקנים
-        for i in self.players:
-            t = Tank(self.game_manager.screen, 300, 400, 25, 25, (0,255,0), 0.1, 2000)
-            self.game_manager.Add_player(t, i)
+            if count == 0:
+                self.run = False
+                break
 
-        while True:
-            for id, cmd in list(self.cmd_queue.items()):
-                self.game_manager.main_loop(id, cmd)
-                del self.cmd_queue[id]
+            if count < 2:
+                for player in players:
+                    self.socket.sendto(WAIT, player)
+                time.sleep(0.1)
+                continue
 
-            self.game_manager.main_loop(None)
+            info = self.str(game_data).encode()
+            for player in players:
+                self.socket.sendto(info, player)
+            time.sleep(1 / FPS)
+
+    def handle_msg(self, addr, msg):
+        # GAME|TYPE|DATA
+        parts = msg.split(b'|', 2)
+        if len(parts) < 3:
+            return
+
+        header, msg_type, info = parts
+
+        if header != GAME:
+            return
+
+        with self.lock:
+            if msg_type == PLAYER_DATA:
+                data = info
+                if self.game_data[addr][0] == None:
+                    self.game_data[addr][0] = GameData(data)
+                else:
+                    self.game_data[addr][0].update(data)
+                return
+
+            if msg_type == ATTACK_POS:
+                data = info
+                attack = AttackData(data)
+                # מחפשים התקפה עם אותו id ומעדכנים אחרת מוסיפים חדשה
+                for _attack in self.game_data[addr][1]:
+                    if attack.id == _attack.id:
+                        _attack.update(data)
+                        break
+                else:
+                    self.game_data[addr][1].append(attack)
+
+    def str(self):
+        with self.lock:
+            info = INFO.decode() + "|"
+            for addr, (player_data, attacks) in self.game_data.items():
+                if player_data is not None:
+                    info += "PLAYER," + player_data.str() + "|"
+                for atk in attacks:
+                    info += "ATTACK," + atk.str() + f",{atk.speed},{atk.id}|"
+                info += "\n"
+        return info
 
 
+class Pos:
+    def __init__(self, x, y, width, height):
+        self.x = x
+        self.y = y
+        self.width = width
+        self.height = height
 
-if __name__ == "__main__":
+    def str(self):
+        return ','.join([
+            str(self.x),
+            str(self.y),
+            str(self.width),
+            str(self.height)
+        ])
+
+class GameData:
+    def __init__(self ,msg):
+        if isinstance(msg , bytes):
+            msg = msg.decode()
+        msg = msg.split(',')
+        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]))
+        self.hp = int(msg[4])
+
+    def update(self,msg):
+        if isinstance(msg , bytes):
+            msg = msg.decode()
+        parts = msg.split(',')
+        self.pos.x = int(parts[0])
+        self.pos.y = int(parts[1])
+        self.pos.width = int(parts[2])
+        self.pos.height = int(parts[3])
+        self.hp = int(parts[4])
+
+    def str(self):
+        return self.pos.str()
+
+class AttackData:
+    def __init__(self ,msg):
+        if isinstance(msg , bytes):
+            msg = msg.decode()
+        msg = msg.split(',')
+
+        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]))
+        self.speed = int(msg[4])
+        self.id = int(msg[5])
+
+    def update(self,msg):
+        if isinstance(msg , bytes):
+            msg = msg.decode()
+        msg = msg.split(',')
+        self.pos.x = int(msg[0])
+        self.pos.y = int(msg[1])
+        self.pos.width = int(msg[2])
+        self.pos.height = int(msg[3])
+        self.pos.speed = int(msg[4])
+
+    def str(self):
+        return self.pos.str()
+
+if '__main__' == __name__:
     s = Server()
-    s.recv()
-
-
-
+    s.wait_for_connection()

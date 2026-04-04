@@ -5,7 +5,7 @@ import pygame, math
 class GameManager:
     def __init__(self):
         self.screen = self.create_screen()
-        self.players = {}
+        self.players = []
         self.attacks = []
         self.background = BackGroundImage(self.screen)
 
@@ -20,16 +20,16 @@ class GameManager:
     def update_screen(self):
         pygame.display.flip()
 
-    def main_loop(self,player_id ,cmd = None):
+    def main_loop(self):
         self.clean_screen()
         self.background.draw()
         self.update_walls()
-        if cmd:
-            self.update_players(cmd)
+        self.update_players()
         self.update_attacks()
-        if cmd:
-            if cmd == ATTACK:
-                self.Create_attack(self.players[player_id])
+
+        key = pygame.key.get_pressed()
+        if key[pygame.K_SPACE]:
+            self.Create_attack(self.players[0])
 
         self.update_screen()
 
@@ -49,20 +49,20 @@ class GameManager:
             attack.action(self.walls)
 
         for attack in self.attacks[:]:
-            for id,player in self.players:
+            for player in self.players[:]:
                 if attack.hitBox.colliderect(player.hitbox):
                     player.hp -= 1
                     if player.hp <= 0:
-                        del self.players[id]
+                        self.players.remove(player)
                     self.attacks.remove(attack)
 
     def update_walls(self):
         for wall in self.walls:
             wall.draw()
 
-    def update_players(self,cmd):
-        for player in self.players.values():
-            player.action_by_key(self.walls,cmd)
+    def update_players(self):
+        for player in self.players:
+            player.action_by_key(self.walls)
 
     def create_screen(self):
         pygame.init()
@@ -73,9 +73,9 @@ class GameManager:
     def clean_screen(self):
         self.screen.fill(SCREEN_COLOR)
 
-    def Add_player(self, player,id):
+    def Add_player(self, player):
         player.screen = self.screen
-        self.players[id] = player
+        self.players.append(player)
 
 
 class Attack:
@@ -91,7 +91,7 @@ class Attack:
         self.original_image = pygame.transform.scale(self.original_image, (self.width * 3, self.height * 3))
         self.image = self.original_image
 
-        self.hitBox = pygame.Rect(0, 0, self.width - 5, self.height - 5)
+        self.hitBox = pygame.Rect(0, 0, self.width - 7, self.height - 7)
         self.hitBox.center = (self.x, self.y)
 
         self.bounces = 0
@@ -99,8 +99,8 @@ class Attack:
 
     def create_pos(self, player):
         rad = math.radians(player.rotation)
-        dx = math.cos(rad) * 32
-        dy = math.sin(rad) * 32
+        dx = math.cos(rad) * 27
+        dy = math.sin(rad) * 27
         return (player.x + dx, player.y + dy)
 
     def draw(self):
@@ -153,7 +153,7 @@ class BackGroundImage:
 
 
 class Tank:
-    def __init__(self, screen, x, y, width, height, color, speed, attack_cooldown):
+    def __init__(self, screen, x, y, width, height, color, speed, attack_cooldown,hp):
         self.x = x
         self.y = y
         self.width = width
@@ -162,7 +162,7 @@ class Tank:
         self.speed = speed
         self.color = color
         self.rotation = 0
-        self.hp = 4
+        self.hp = hp
         img = pygame.image.load(IMAGE_ROOT + "tank.png").convert_alpha()
         self.original_image = pygame.transform.scale(img, (width * 3, height * 3))
         self.image = self.original_image
@@ -173,14 +173,15 @@ class Tank:
         self.last_attack_time = 0
         self.attack_cooldown = attack_cooldown
 
-    def action_by_key(self, walls, cmd):
-        if cmd == UP:
+    def action_by_key(self, walls):
+        key = pygame.key.get_pressed()
+        if key[pygame.K_w]:
             self.move_by_speed(walls, 1)
-        if cmd == DOWN:
+        if key[pygame.K_s]:
             self.move_by_speed(walls, -1)
-        if cmd == RIGHT:
+        if key[pygame.K_a]:
             self.rotation -= 0.1
-        if cmd == LEFT:
+        if key[pygame.K_d]:
             self.rotation += 0.1
         self.draw()
 
@@ -227,3 +228,15 @@ class Wall:
     def draw(self):
         pygame.draw.rect(self.screen, (255, 255, 255), self.hitbox)
 
+
+def main():
+    manager = Manager()
+    t = Tank(manager.screen, 300, 400, 25, 25, (0, 255, 0), 0.1, 1000)
+    manager.Add_player(t)
+
+    while True:
+        for event in pygame.event.get():
+            if event.type == pygame.QUIT:
+                return
+
+        manager.main_loop()
