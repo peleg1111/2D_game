@@ -40,6 +40,9 @@ class GameManager:
             attack.screen = self.screen
             self.attacks.append(attack)
             player.last_attack_time = now
+            while(attack.hitBox.colliderect(player.hitbox)):
+                attack.action(self.walls)
+
 
     def update_attacks(self):
         for attack in self.attacks[:]:
@@ -47,6 +50,11 @@ class GameManager:
                 self.attacks.remove(attack)
                 continue
             attack.action(self.walls)
+        for i in self.attacks[:]:
+            for j in self.attacks[:]:
+                if i != j and i.hitBox.colliderect(j.hitBox):
+                    self.attacks.remove(i)
+                    self.attacks.remove(j)
 
         for attack in self.attacks[:]:
             for player in self.players[:]:
@@ -83,24 +91,26 @@ class Attack:
         self.screen = None
         self.x, self.y = self.create_pos(player)
 
-        self.width = player.width
-        self.height = player.height
+        self.width = player.width * 0.8
+        self.height = player.height * 0.8
         self.rotation = player.rotation
         self.speed = player.speed * 2.2
+
         self.original_image = pygame.image.load(IMAGE_ROOT + "attack.png").convert_alpha()
         self.original_image = pygame.transform.scale(self.original_image, (self.width * 3, self.height * 3))
         self.image = self.original_image
 
-        self.hitBox = pygame.Rect(0, 0, self.width - 7, self.height - 7)
+        self.hitBox = pygame.Rect(0, 0, self.width - 9, self.height - 9)
         self.hitBox.center = (self.x, self.y)
 
         self.bounces = 0
-        self.max_bounces = 3
+        self.max_bounces = 5
+
 
     def create_pos(self, player):
         rad = math.radians(player.rotation)
-        dx = math.cos(rad) * 27
-        dy = math.sin(rad) * 27
+        dx = math.cos(rad) * 23
+        dy = math.sin(rad) * 23
         return (player.x + dx, player.y + dy)
 
     def draw(self):

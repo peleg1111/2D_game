@@ -1,15 +1,3 @@
-"""
-            לוגיקה
-השרת שומר את המיקומים ההתחליים של השחקנים   1
-כאשר השחקנים שולחים הודעה השרת מחשב את המיקומים של הכל ושולח ללקוח   2
-הלקוח מקבל את המיקומים ומצייר את הלוח   3
-
-            שינויים
-לשנות את מנהל המשחק שיקבל דברים לפי פקודה ולא לפי המקלדת    1
-ליצור שרת שעל כל 2 שחקנים הוא פותח חדר ומעביר להם הודעות    2
-ליצור לקוח שמקבל הודעות ומעדכן את המשחק    3
-"""
-
 import socket ,time
 import threading
 
@@ -34,7 +22,8 @@ class Server:
                 if data == START_GAME:
                     with self.lock:
                         self.players.append(addr)
-                        self.find_player_room(addr)
+
+                    self.find_player_room(addr)
                     self.socket.sendto(ACK,addr)
                 else:
                     self.socket.sendto(CONNECTION_FAIL,addr)
@@ -97,7 +86,8 @@ class Server:
                         print(f" Player {addr}:")
                         if playerData:
                             print(
-                                f"   Pos: {playerData.pos.x},{playerData.pos.y}  Size:{playerData.pos.width}x{playerData.pos.height}  HP:{playerData.hp}")
+                                f"   Pos: {playerData.pos.x},{playerData.pos.y}  Size:{playerData.pos.width}x{playerData.pos.height}  HP:{playerData.hp}",
+                                f" Rotation {playerData.pos.rotation}")
                         else:
                             print("   No PLAYER_DATA yet")
 
@@ -116,12 +106,12 @@ class Room(threading.Thread):
         threading.Thread.__init__(self)
         self.players = []
         self.count_players = 0
-        self.add_player(player)
         self.socket = server_sock
-        self.run = True
+        self.Run = True
         # addr : [ GAME_DATA , ATTACK_DATA[] ]
         self.game_data = {}
         self.lock = threading.Lock()
+        self.add_player(player)
 
     def add_player(self,addr):
         with self.lock:
@@ -130,23 +120,22 @@ class Room(threading.Thread):
             self.game_data[addr] = [None , []]
 
     def run(self):
-        while self.run:
+        while self.Run:
             with self.lock:
                 count = self.count_players
                 players = self.players[:]
-                game_data = dict(self.game_data)
 
             if count == 0:
-                self.run = False
+                self.Run = False
                 break
 
             if count < 2:
                 for player in players:
                     self.socket.sendto(WAIT, player)
-                time.sleep(0.1)
+                time.sleep(0.5)
                 continue
 
-            info = self.str(game_data).encode()
+            info = self.str().encode()
             for player in players:
                 self.socket.sendto(info, player)
             time.sleep(1 / FPS)
@@ -187,7 +176,7 @@ class Room(threading.Thread):
             info = INFO.decode() + "|"
             for addr, (player_data, attacks) in self.game_data.items():
                 if player_data is not None:
-                    info += "PLAYER," + player_data.str() + "|"
+                    info += f"PLAYER{addr}," + player_data.str() + "|"
                 for atk in attacks:
                     info += "ATTACK," + atk.str() + f",{atk.speed},{atk.id}|"
                 info += "\n"
@@ -195,37 +184,43 @@ class Room(threading.Thread):
 
 
 class Pos:
-    def __init__(self, x, y, width, height):
+    def __init__(self, x, y, width, height,rotation):
         self.x = x
         self.y = y
         self.width = width
         self.height = height
+        self.rotation = rotation
 
     def str(self):
         return ','.join([
             str(self.x),
             str(self.y),
             str(self.width),
-            str(self.height)
+            str(self.height),
+            str(self.rotation)
         ])
 
 class GameData:
     def __init__(self ,msg):
         if isinstance(msg , bytes):
             msg = msg.decode()
+
         msg = msg.split(',')
-        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]))
+        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]),int(msg[5]))
         self.hp = int(msg[4])
+
 
     def update(self,msg):
         if isinstance(msg , bytes):
             msg = msg.decode()
         parts = msg.split(',')
+
         self.pos.x = int(parts[0])
         self.pos.y = int(parts[1])
         self.pos.width = int(parts[2])
         self.pos.height = int(parts[3])
         self.hp = int(parts[4])
+        self.pos.rotation = int(parts[5])
 
     def str(self):
         return self.pos.str()
@@ -236,7 +231,7 @@ class AttackData:
             msg = msg.decode()
         msg = msg.split(',')
 
-        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]))
+        self.pos = Pos(int(msg[0]),int(msg[1]),int(msg[2]),int(msg[3]),int(msg[6]))
         self.speed = int(msg[4])
         self.id = int(msg[5])
 
@@ -249,6 +244,7 @@ class AttackData:
         self.pos.width = int(msg[2])
         self.pos.height = int(msg[3])
         self.pos.speed = int(msg[4])
+        self.pos.rotation = int(msg[5])
 
     def str(self):
         return self.pos.str()
