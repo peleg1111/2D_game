@@ -1,3 +1,5 @@
+import random
+
 import pygame, math , time
 from const import *
 
@@ -11,12 +13,9 @@ class Tank:
         self.rotation = 0
         self.hp = hp
         self.last_attack = time.time()
-        self.cooldown = 2
+        self.cooldown = 1
 
-    def move(self, direction, walls, other_players = None):
-        if other_players is None:
-            other_players = []
-
+    def move(self, direction, walls, other_players):
         old_x = self.x
         old_y = self.y
         rad = math.radians(self.rotation)
@@ -63,13 +62,14 @@ class Tank:
 
 class Attack:
     def __init__(self, x, y, rotation, speed=4):
-        self.x = x
-        self.y = y
+        rad = math.radians(rotation)
+        self.x = x + math.cos(rad) * 15
+        self.y = y + math.sin(rad) * 15
         self.rotation = rotation
         self.speed = speed
-        self.bounss = 5
+        self.bounss = 7
 
-    def update(self, walls):
+    def update(self, walls, players):
         old_x = self.x
         old_y = self.y
 
@@ -87,12 +87,16 @@ class Attack:
                 #  קפיצה לפי סוג הקיר
                 if wall.hitbox.width > wall.hitbox.height:
                     # קיר אופקי <- הופכים כיוון אנכי
-                    self.rotation = -self.rotation
+                    self.rotation = -self.rotation + random.randint(-15 , 15)
                 else:
                     # קיר אנכי <- הופכים כיוון אופקי
-                    self.rotation = 180 - self.rotation
+                    self.rotation = 180 - self.rotation + random.randint(-15 , 15)
                 self.bounss -= 1
                 break
+        for addr,player in players.items():
+            if rect.colliderect(player.get_rect()):
+                player.hp -= 1
+                self.bounss = 0
 
     def is_finished(self):
         return self.bounss <= 0

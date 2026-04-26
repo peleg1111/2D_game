@@ -31,12 +31,15 @@ class Client:
                     return
 
             keys = pygame.key.get_pressed()
-            key = "NONE"
+            key = ""
             if keys[pygame.K_w]: key += "W"
             if keys[pygame.K_s]: key += "S"
             if keys[pygame.K_a]: key += "A"
             if keys[pygame.K_d]: key += "D"
             if keys[pygame.K_SPACE]: key += "!"
+
+            if key == "":
+                key = 'None'
 
             self.send_msg(f"INPUT|{key}")
             self.manager.main_loop()

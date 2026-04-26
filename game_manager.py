@@ -45,13 +45,36 @@ class GameManager:
         self.game_state = GameState.WAITING
         self.lock = threading.Lock()
 
-        self.walls = [
-            Wall(self.screen, -9, 0, 9, SCREEN_SIZE[1]),
-            Wall(self.screen, SCREEN_SIZE[0], 0, 9, SCREEN_SIZE[1]),
-            Wall(self.screen, 0, SCREEN_SIZE[1], SCREEN_SIZE[0], 9),
-            Wall(self.screen, 0, 0, SCREEN_SIZE[0], 9),
-            Wall(self.screen, SCREEN_SIZE[0]/4, SCREEN_SIZE[1]/2, SCREEN_SIZE[0]/2, 9)
-        ]
+        self.walls = self.create_maze_walls()
+
+    def create_maze_walls(self):
+        walls = []
+        T = 12  # עובי קיר
+        W, H = SCREEN_SIZE
+
+        # גבולות חיצוניים
+        walls.append(Wall(self.screen,0, 0, W, T))
+        walls.append(Wall(self.screen,0, H - T, W, T))
+        walls.append(Wall(self.screen,0, 0, T, H))
+        walls.append(Wall(self.screen,W - T, 0, T, H))
+        #קירות המבוך
+        walls.append(Wall(self.screen,W * 0.1, H * 0.45, W * 0.8, T))
+        walls.append(Wall(self.screen,W * 0.48, H * 0.1, T, H * 0.8))
+        walls.append(Wall(self.screen,W * 0.1, H * 0.1, W * 0.25, T))
+        walls.append(Wall(self.screen,W * 0.1, H * 0.1, T, H * 0.25))
+        walls.append(Wall(self.screen,W * 0.65, H * 0.1, W * 0.25, T))
+        walls.append(Wall(self.screen,W * 0.9 - T, H * 0.1, T, H * 0.25))
+        walls.append(Wall(self.screen,W * 0.25, H * 0.25, W * 0.15, T))
+        walls.append(Wall(self.screen,W * 0.6, H * 0.25, W * 0.15, T))
+        walls.append(Wall(self.screen,W * 0.1, H * 0.65, W * 0.25, T))
+        walls.append(Wall(self.screen,W * 0.1, H * 0.65, T, H * 0.25))
+        walls.append(Wall(self.screen,W * 0.65, H * 0.65, W * 0.25, T))
+        walls.append(Wall(self.screen,W * 0.9 - T, H * 0.65, T, H * 0.25))
+        walls.append(Wall(self.screen,W * 0.25, H * 0.55, W * 0.15, T))
+        walls.append(Wall(self.screen,W * 0.6, H * 0.55, W * 0.15, T))
+        walls.append(Wall(self.screen,W * 0.45, H * 0.45, W * 0.1, T))
+
+        return walls
 
     def create_screen(self):
         pygame.init()

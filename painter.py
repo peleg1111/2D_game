@@ -32,9 +32,9 @@ class Painter:
             )
 
     def draw_attack(self, attack):
-        rotated = pygame.transform.rotate(self.attack_img, -attack.rotation)
+        rotated = pygame.transform.scale(self.attack_img, (80, 80))
+        rotated = pygame.transform.rotate(rotated, -attack.rotation)
 
-        rotated = pygame.transform.scale(rotated, (80, 80))
 
         rect = rotated.get_rect(center=(attack.x, attack.y))
 
