@@ -3,19 +3,21 @@ SCREEN_NAME = "my Game"
 SCREEN_COLOR = (50, 50, 50)
 FPS = 60
 PLAYER_COUNT = 2
-
+WALL_SIZE = 12 # עובי הקיר
 IMAGE_ROOT = 'images\\'
-
+TIME_BETWEEN_STATES = 6 # זמן המתנה במעבר בין מסכים כמו מסך הפסר למשך הראשי
 # רשת
 ADDR_SERVER = ("127.0.0.1", 1234)
 
 # הודעות
 START_GAME = b"START"
+END_CONACTION = b"END_CONACTION"
 GAME = b"GAME"
 INFO = b"INFO"
 WAIT = b"WAIT"
 LOSE_GAME = b"LOSE"
 WIN_GAME = b"WIN"
+WAIT = b"WAIT"
 
 PLAYER_DATA = b"PLAYER_DATA"
 ATTACK_POS = b"ATTACK_POS"

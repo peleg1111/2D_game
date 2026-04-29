@@ -61,13 +61,13 @@ class Tank:
 
 
 class Attack:
-    def __init__(self, x, y, rotation, speed=4):
+    def __init__(self, x, y, rotation, speed = 3.5):
         rad = math.radians(rotation)
-        self.x = x + math.cos(rad) * 15
-        self.y = y + math.sin(rad) * 15
+        self.x = x + math.cos(rad) * 23
+        self.y = y + math.sin(rad) * 23
         self.rotation = rotation
         self.speed = speed
-        self.bounss = 7
+        self.bounss = 10
 
     def update(self, walls, players):
         old_x = self.x
@@ -77,7 +77,7 @@ class Attack:
         self.x += math.cos(rad) * self.speed
         self.y += math.sin(rad) * self.speed
 
-        rect = pygame.Rect(self.x - 3, self.y - 3, 6, 6)
+        rect = pygame.Rect(self.x - 3, self.y - 3, 8, 8)
 
         for wall in walls:
             if rect.colliderect(wall.hitbox):
@@ -103,3 +103,7 @@ class Attack:
 
     def is_out_of_bounds(self):
         return not (0 <= self.x <= SCREEN_SIZE[0] and 0 <= self.y <= SCREEN_SIZE[1])
+
+class Wall:
+    def __init__(self, x, y, w, h):
+        self.hitbox = pygame.Rect(x, y, w, h)
