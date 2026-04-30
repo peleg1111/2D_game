@@ -68,7 +68,7 @@ class Painter:
         screen.fill((30, 30, 30))
 
         font = pygame.font.SysFont(None, 70)
-        text = font.render("you win'", True, (255, 255, 255))
+        text = font.render("you win", True, (255, 255, 255))
         screen.blit(text, (SCREEN_SIZE[0] // 2 - text.get_width() // 2, SCREEN_SIZE[1] // 2 - 120))
 
         self.animation_3dot(screen)
@@ -79,7 +79,7 @@ class Painter:
     def draw_before_game_screen(self, screen):
         screen.fill((30, 30, 30))
         font = pygame.font.SysFont(None, 70)
-        text1 = font.render("PELEG GAME", True, (255, 255, 255))
+        text1 = font.render("PELEG'S GAME", True, (255, 255, 255))
         screen.blit(text1, (SCREEN_SIZE[0] // 2 - text1.get_width() // 2, SCREEN_SIZE[1] // 2 - 220))
 
         text2 = font.render("press space to play", True, (255, 255, 255))

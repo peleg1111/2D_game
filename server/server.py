@@ -3,13 +3,6 @@ from const import *
 from server_data import Tank, Attack, Wall
 
 
-"""      to do list 
-    לתקן את מערכת החדרים תוך שמירה על זמן ההודעה האחרון של הלקוח ולהוציא אותו עם זמן זה גדול מדי ---
-    לשפר את הממשק הגרפי אצל הלקוח כך שיוכל ללחוץ על כפתור התחלה ---
-    ליצור מערכת התחברות והרשמה ---
-
-
-"""
 
 
 class client_state:
@@ -19,13 +12,14 @@ class client_state:
 
 
 class Server:
-    def __init__(self):
+    def __init__(self, max_player_in_room = PLAYER_COUNT ):
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.sock.bind(("0.0.0.0", 1234))
         print("server started on port 1234")
         self.rooms = []
         self.lock = threading.Lock()
         self.clients = [] # addr
+        self.max_players_in_room = max_player_in_room
 
     def start(self):
         threading.Thread(target = self.show_state , daemon = True).start()
@@ -62,11 +56,11 @@ class Server:
     def join_room(self, addr):
         with self.lock:
             for room in self.rooms:
-                if room.player_count < PLAYER_COUNT:
+                if room.player_count < self.max_players_in_room:
                     room.add_player(addr)
                     return
 
-            room = Room(self.sock, self)
+            room = Room(self.sock, self, self.max_players_in_room)
             room.add_player(addr)
             room.start()
             self.rooms.append(room)
@@ -94,7 +88,7 @@ class Server:
 
         return (f"=========  SERVER  ============\n"
               f"room count: {len(self.rooms)}\n"
-              f"default players count in each room: {PLAYER_COUNT}\n"
+              f"default players count in each room: {self.max_players_in_room}\n"
               f"=================================\n"
               f"{state}\n")
 
@@ -102,7 +96,7 @@ class Server:
 
 
 class Room(threading.Thread):
-    def __init__(self, sock, server, max_player = PLAYER_COUNT ):
+    def __init__(self, sock, server, max_player ):
         super().__init__(daemon=True)
         self.server = server
         self.max_players = max_player
@@ -223,7 +217,8 @@ class Room(threading.Thread):
                     self.attacks.append((addr, Attack(player.x, player.y, player.rotation)))
 
             for addr, atk in self.attacks[:]:
-                atk.update(self.walls, self.players)
+                audio = atk.update(self.walls, self.players)
+                self.send_sound(audio)
 
                 if atk.is_finished():
                     self.attacks.remove((addr,atk))
@@ -252,6 +247,13 @@ class Room(threading.Thread):
             self.server.clients.remove(addr)
             self.player_count -= 1
             self.max_players -= 1
+
+
+    def send_sound(self,type):
+        if not type: return
+
+        for i in self.players.keys():
+            self.sock.sendto(AUDIO + str(type).encode(),i)
 
 
     def send_state(self):

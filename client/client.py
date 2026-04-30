@@ -1,6 +1,10 @@
-import random , time , socket , threading , pygame
+import socket , threading , pygame
+
+from scapy.contrib.automotive.xcp.cto_commands_master import GetDaqListInfo
+
 from const import *
 from game_manager import GameManager, GameState
+from audio import Audio
 
 class Client:
     def __init__(self):
@@ -10,6 +14,8 @@ class Client:
         self.run = True
         self.lock = threading.Lock()
         threading.Thread(target=self.recv, daemon=True).start()
+        self.audio = Audio()
+
 
     def send_msg(self, msg):
         self.sock.sendto( msg.encode() if isinstance(msg, str) else msg , self.dst)
@@ -18,6 +24,7 @@ class Client:
 
     def main_loop(self):
         clock = pygame.time.Clock()
+        self.audio.play_background_song()
 
         while self.run:
             for event in pygame.event.get():
@@ -54,16 +61,25 @@ class Client:
 
         elif msg == LOSE_GAME.decode():
             self.manager.game_state = GameState.LOSE
-
-        elif msg == WAIT.decode() and self.manager.game_state != GameState.PLAYING:
-            self.manager.game_state = GameState.WAITING
+            self.audio.play_lose_song()
 
         elif msg == WIN_GAME.decode():
             self.manager.game_state = GameState.WIN
+            self.audio.play_win_song()
+
+        elif msg.startswith(AUDIO.decode()):
+            if msg.split("|")[1] == str(audio_type.HIT_WALL):
+                self.audio.play_hit_wall_song()
+                self.audio.play_hit_wall_song()
+                self.audio.play_hit_wall_song()
+
+
+            elif msg.split("|")[1] == str(audio_type.HIT_PLAYER):
+                self.audio.play_hit_player_song()
 
     def start(self):
         self.sock.sendto(START_GAME, self.dst)
-        self.game_state = GameState.WAITING
+        self.manager.game_state = GameState.WAITING
 
     def recv(self):
         while self.run:

@@ -1,4 +1,5 @@
 import random
+from enum import Enum
 
 import pygame, math , time
 from const import *
@@ -70,6 +71,8 @@ class Attack:
         self.bounss = 10
 
     def update(self, walls, players):
+        ttl = self.bounss
+
         old_x = self.x
         old_y = self.y
 
@@ -97,6 +100,10 @@ class Attack:
             if rect.colliderect(player.get_rect()):
                 player.hp -= 1
                 self.bounss = 0
+                return audio_type.HIT_PLAYER
+        if self.bounss != ttl:
+            return audio_type.HIT_WALL
+        return None
 
     def is_finished(self):
         return self.bounss <= 0
