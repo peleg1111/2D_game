@@ -1,7 +1,4 @@
 import socket , threading , pygame
-
-from scapy.contrib.automotive.xcp.cto_commands_master import GetDaqListInfo
-
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
@@ -31,11 +28,16 @@ class Client:
                 if event.type == pygame.QUIT:
                     self.run = False
                     return
+                elif self.manager.game_state == GameState.BEFORE_GAME:
+                    if self.manager.start_game_button.is_clicked(event):
+                        self.start()
+                    if self.manager.exit_button.is_clicked(event):
+                        self.run = False
+                        return
+
             keys = pygame.key.get_pressed()
 
             if self.manager.game_state != GameState.PLAYING:
-                if keys[pygame.K_SPACE] and self.manager.game_state == GameState.BEFORE_GAME:
-                    self.start()
                 self.manager.main_loop()
                 continue
 

@@ -4,6 +4,7 @@ import pygame, threading
 from enum import Enum
 from const import *
 from painter import Painter
+from Button import Button
 
 class GameState(Enum):
     WIN = -1
@@ -55,8 +56,15 @@ class GameManager:
         self.lock = threading.Lock()
         self.walls = self.create_maze_walls()
         self.start_timer_screen = None
+        self.start_game_button = Button(
+            SCREEN_SIZE[0]/2 - 50 , 220 , 100 , 65 ,"   play   ",
+            pygame.font.SysFont("Arial", 50),(100,100,100), (50,60,70)
+        )
 
-
+        self.exit_button = Button(
+            0 ,0 , 100 , 65 ,"exit",
+            pygame.font.SysFont("Arial", 50),(100,100,100), (50,60,70)
+        )
     def create_maze_walls(self):
         walls = []
         W, H = SCREEN_SIZE
@@ -131,6 +139,8 @@ class GameManager:
 
         elif self.game_state == GameState.BEFORE_GAME:
             self.painter.draw_before_game_screen(self.screen)
+            self.start_game_button.draw(self.screen)
+            self.exit_button.draw(self.screen)
 
 
         elif self.game_state == GameState.WIN:

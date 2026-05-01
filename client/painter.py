@@ -80,10 +80,7 @@ class Painter:
         screen.fill((30, 30, 30))
         font = pygame.font.SysFont(None, 70)
         text1 = font.render("PELEG'S GAME", True, (255, 255, 255))
-        screen.blit(text1, (SCREEN_SIZE[0] // 2 - text1.get_width() // 2, SCREEN_SIZE[1] // 2 - 220))
-
-        text2 = font.render("press space to play", True, (255, 255, 255))
-        screen.blit(text2, (SCREEN_SIZE[0] // 2 - text2.get_width() // 2, SCREEN_SIZE[1] // 2 - 120))
+        screen.blit(text1, (SCREEN_SIZE[0] // 2 - text1.get_width() // 2, SCREEN_SIZE[1] // 2 - 160))
         self.animation_3dot(screen)
 
 
@@ -92,7 +89,7 @@ class Painter:
         radius = 12
         spacing = 40
         base_x = SCREEN_SIZE[0] // 2 - spacing
-        y = SCREEN_SIZE[1] // 2
+        y = SCREEN_SIZE[1] // 2 + 50
 
         for i in range(3):
             offset = math.sin(t * 3 + i) * 12

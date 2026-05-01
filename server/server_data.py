@@ -86,16 +86,31 @@ class Attack:
             if rect.colliderect(wall.hitbox):
                 self.x = old_x
                 self.y = old_y
+                dx = math.cos(rad)
+                dy = math.sin(rad)
 
-                #  קפיצה לפי סוג הקיר
-                if wall.hitbox.width > wall.hitbox.height:
-                    # קיר אופקי <- הופכים כיוון אנכי
-                    self.rotation = -self.rotation + random.randint(-15 , 15)
+                if abs(rect.right - wall.hitbox.left) < 5:
+                    normal = (-1, 0)  # פגיעה מצד ימין של הקיר
+
+                elif abs(rect.left - wall.hitbox.right) < 5:
+                    normal = (1, 0)  # פגיעה מצד שמאל
+
+                elif abs(rect.bottom - wall.hitbox.top) < 5:
+                    normal = (0, -1)  # פגיעה מלמטה
+
+                elif abs(rect.top - wall.hitbox.bottom) < 5:
+                    normal = (0, 1)  # פגיעה מלמעלה
+
                 else:
-                    # קיר אנכי <- הופכים כיוון אופקי
-                    self.rotation = 180 - self.rotation + random.randint(-15 , 15)
+                    normal = (dx * -1, dy * -1)# פגיעה בפינה <-- נורמל אלכסוני
+
+                dot = dx * normal[0] + dy * normal[1]
+                rx = dx - 2 * dot * normal[0]
+                ry = dy - 2 * dot * normal[1]
+                self.rotation = math.degrees(math.atan2(ry, rx)) + random.randint(-5 , 6)
                 self.bounss -= 1
                 break
+
         for addr,player in players.items():
             if rect.colliderect(player.get_rect()):
                 player.hp -= 1
