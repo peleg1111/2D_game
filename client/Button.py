@@ -1,6 +1,5 @@
 import pygame
 
-
 class Button:
     def __init__(self, x, y, width, height, text, font, color, color_hover):
         self.rect = pygame.Rect(x, y, width, height)
@@ -18,9 +17,9 @@ class Button:
         else:
             color = self.color
 
-        pygame.draw.rect(screen, color, self.rect, border_radius=10)
+        pygame.draw.rect(screen, color, self.rect, border_radius= 9)
 
-        text = self.font.render(self.text, True, (255, 255, 255))
+        text = self.font.render(self.text, True, (216, 237, 68))
         text_rect = text.get_rect(center=self.rect.center)
         screen.blit(text, text_rect)
 

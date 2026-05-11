@@ -1,10 +1,10 @@
 import time
 
 import pygame, threading
-from enum import Enum
 from const import *
 from painter import Painter
 from Button import Button
+from Slider import Slider
 
 class GameState(Enum):
     WIN = -1
@@ -12,6 +12,8 @@ class GameState(Enum):
     BEFORE_GAME = 1
     WAITING = 2
     PLAYING = 3
+    DISCONNECTED = 4
+    SETTINGS = 5
 
 class Wall:
     def __init__(self, screen, x, y, width, height):
@@ -56,8 +58,9 @@ class GameManager:
         self.lock = threading.Lock()
         self.walls = self.create_maze_walls()
         self.start_timer_screen = None
+        
         self.start_game_button = Button(
-            SCREEN_SIZE[0]/2 - 50 , 220 , 100 , 65 ,"   play   ",
+            SCREEN_SIZE[0]/2 - 50 , SCREEN_SIZE[1]/3 , 100 , 65 ,"   play   ",
             pygame.font.SysFont("Arial", 50),(100,100,100), (50,60,70)
         )
 
@@ -65,6 +68,22 @@ class GameManager:
             0 ,0 , 100 , 65 ,"exit",
             pygame.font.SysFont("Arial", 50),(100,100,100), (50,60,70)
         )
+
+        self.settings_button = Button(
+            SCREEN_SIZE[0]-150, 0, 150, 65, "settings",
+            pygame.font.SysFont("Arial", 50), (100, 100, 100), (50, 60, 70)
+        )
+
+        self.back_to_menu_button = Button(
+            0, 0, 100, 65, "back",
+            pygame.font.SysFont("Arial", 50), (100, 100, 100), (50, 60, 70)
+        )
+
+        self.volume_slider = Slider(
+            SCREEN_SIZE[0]/3, SCREEN_SIZE[1]/5, 300, 0,
+            2.5,1 , 'volume:'
+        )
+
     def create_maze_walls(self):
         walls = []
         W, H = SCREEN_SIZE
@@ -120,42 +139,63 @@ class GameManager:
 
     def main_loop(self):
         self.clean_screen()
+        match self.game_state:
 
-        if self.game_state == GameState.WAITING:
-            self.painter.draw_waiting_screen(self.screen)
-
-
-        elif self.game_state == GameState.LOSE:
-            self.painter.draw_lose_screen(self.screen)
-            now = time.time()
-
-            if not self.start_timer_screen:
-                self.start_timer_screen = time.time()
-
-            if now - self.start_timer_screen > TIME_BETWEEN_STATES:
-                self.start_timer_screen = None
-                self.game_state = GameState.BEFORE_GAME
+            case GameState.WAITING:
+                self.painter.draw_waiting_screen(self.screen)
 
 
-        elif self.game_state == GameState.BEFORE_GAME:
-            self.painter.draw_before_game_screen(self.screen)
-            self.start_game_button.draw(self.screen)
-            self.exit_button.draw(self.screen)
+
+            case GameState.LOSE:
+                self.painter.draw_lose_screen(self.screen)
+                now = time.time()
+
+                if not self.start_timer_screen:
+                    self.start_timer_screen = time.time()
+
+                if now - self.start_timer_screen > TIME_BETWEEN_STATES:
+                    self.start_timer_screen = None
+                    self.game_state = GameState.BEFORE_GAME
 
 
-        elif self.game_state == GameState.WIN:
-            self.painter.draw_win_screen(self.screen)
-            now = time.time()
-
-            if not self.start_timer_screen:
-                self.start_timer_screen = time.time()
-
-            if now - self.start_timer_screen > TIME_BETWEEN_STATES:
-                self.start_timer_screen = None
-                self.game_state = GameState.BEFORE_GAME
+            case GameState.BEFORE_GAME:
+                self.painter.draw_before_game_screen(self.screen)
+                self.start_game_button.draw(self.screen)
+                self.exit_button.draw(self.screen)
+                self.settings_button.draw(self.screen)
 
 
-        else:   self.update_screen()
+            case GameState.WIN:
+                self.painter.draw_win_screen(self.screen)
+                now = time.time()
+
+                if not self.start_timer_screen:
+                    self.start_timer_screen = time.time()
+
+                if now - self.start_timer_screen > TIME_BETWEEN_STATES:
+                    self.start_timer_screen = None
+                    self.game_state = GameState.BEFORE_GAME
+
+
+            case GameState.PLAYING:
+                self.update_screen()
+
+
+            case GameState.DISCONNECTED:
+                self.painter.draw_disconnected_screen(self.screen)
+                now = time.time()
+
+                if not self.start_timer_screen:
+                    self.start_timer_screen = time.time()
+
+                if now - self.start_timer_screen > TIME_BETWEEN_STATES:
+                    self.start_timer_screen = None
+                    self.game_state = GameState.BEFORE_GAME
+
+            case GameState.SETTINGS:
+                self.painter.draw_settings_screen(self.screen)
+                self.back_to_menu_button.draw(self.screen)
+                self.volume_slider.draw(self.screen)
 
         pygame.display.flip()
 

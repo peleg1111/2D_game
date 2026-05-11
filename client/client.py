@@ -1,4 +1,4 @@
-import socket , threading , pygame
+import socket , threading , pygame , time
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
@@ -14,11 +14,6 @@ class Client:
         self.audio = Audio()
 
 
-    def send_msg(self, msg):
-        self.sock.sendto( msg.encode() if isinstance(msg, str) else msg , self.dst)
-        print(f'sent to server -->> {len(msg)}|{msg}')
-
-
     def main_loop(self):
         clock = pygame.time.Clock()
         self.audio.play_background_song()
@@ -28,16 +23,32 @@ class Client:
                 if event.type == pygame.QUIT:
                     self.run = False
                     return
+
                 elif self.manager.game_state == GameState.BEFORE_GAME:
-                    if self.manager.start_game_button.is_clicked(event):
+                    if self.is_clicked(self.manager.start_game_button, event):
                         self.start()
-                    if self.manager.exit_button.is_clicked(event):
+
+                    if self.is_clicked(self.manager.exit_button, event):
                         self.run = False
                         return
+
+                    if self.is_clicked(self.manager.settings_button, event):
+                        self.manager.game_state = GameState.SETTINGS
+
+                elif self.manager.game_state == GameState.SETTINGS:
+                    if self.is_clicked(self.manager.back_to_menu_button, event):
+                        self.manager.game_state = GameState.BEFORE_GAME
+                    self.manager.volume_slider.handle_event(event)
+                    if self.manager.volume_slider.is_dragging():
+                        self.audio.set_all(self.manager.volume_slider.val)
 
             keys = pygame.key.get_pressed()
 
             if self.manager.game_state != GameState.PLAYING:
+
+                if self.manager.game_state == GameState.WAITING:
+                    self.send(WAIT)
+
                 self.manager.main_loop()
                 continue
 
@@ -51,7 +62,7 @@ class Client:
             if key == "":
                 key = 'None'
 
-            self.send_msg(f"INPUT|{key}")
+            self.send(f"INPUT|{key}")
             self.manager.main_loop()
             clock.tick(FPS)
 
@@ -73,26 +84,53 @@ class Client:
             if msg.split("|")[1] == str(audio_type.HIT_WALL):
                 self.audio.play_hit_wall_song()
                 self.audio.play_hit_wall_song()
-                self.audio.play_hit_wall_song()
 
 
             elif msg.split("|")[1] == str(audio_type.HIT_PLAYER):
                 self.audio.play_hit_player_song()
 
+
     def start(self):
-        self.sock.sendto(START_GAME, self.dst)
+        self.send(START_GAME)
         self.manager.game_state = GameState.WAITING
+
 
     def recv(self):
         while self.run:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                msg = data.decode()
-                print(f"got from server -->> {len(data)}|{msg}")
-                self.handle_msg(msg)
-            except socket.error:
-                continue
+            if self.manager.game_state != GameState.WAITING and self.manager.game_state != GameState.PLAYING:
+                self.Wait()
+            else:
+                self._recv()
 
+
+    def Wait(self):
+        time.sleep(0.2)
+
+
+    def _recv(self):
+        try:
+            self.sock.settimeout(TIME_BEFORE_REMOVE)
+            data, addr = self.sock.recvfrom(2048)
+            msg = data.decode()
+            print(f"got from server -->> {len(data)}|{msg}")
+            self.handle_msg(msg)
+        except socket.error as e:
+            print(e)
+            self.sock.settimeout(None)
+            self.manager.game_state = GameState.DISCONNECTED
+
+
+    def send(self, msg):
+        self.sock.sendto(msg.encode() if isinstance(msg , str) else msg, self.dst)
+        print("send to server --> ",msg)
+
+
+    def is_clicked(self, button, event):
+        if button.is_clicked(event):
+            self.audio.play_click()
+            time.sleep(0.5)
+            return True
+        return False
 
 def main():
     client = Client()

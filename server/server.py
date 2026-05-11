@@ -1,17 +1,6 @@
-import math
-import socket, threading, time , random , pygame
+import socket, threading, time , random , pygame , math
 from const import *
 from server_data import Tank, Attack, Wall
-
-"""      to do list 
-    לתקן את מערכת החדרים תוך שמירה על זמן ההודעה האחרון של הלקוח ולהוציא אותו עם זמן זה גדול מדי ---
-    ליצור העברת הודעות בטוחה כך שאין סיכוי להחמצת הודעות חשובות ---
-    ליצור מערכת התחברות והרשמה ---
-    להוסיף הצפנות ---
-    להוסיף השמדה עצמית להתקפות כאשר הן מתנגשות זה בזה ---
-
-        err list
-"""
 
 class client_state:
     def __init__(self,last_time, is_active):
@@ -34,12 +23,8 @@ class Server:
         threading.Thread(target = self.clean_dead_rooms , daemon = True).start()
 
         while True:
-            try:
-                data, addr = self.sock.recvfrom(2048)
-                print(f"got from{addr} -->> {len(data)}|" + data.decode())
-            except Exception as e:
-                print(e)
-                continue
+            data , addr = self.recv()
+            if not addr or not data: continue
 
             self.register(addr)
 
@@ -49,6 +34,17 @@ class Server:
                 room = self.find_room(addr)
                 if room:
                     room.handle_input(addr, data)
+
+
+    def recv(self):
+        try:
+            data, addr = self.sock.recvfrom(2048)
+            print(f"got from{addr} -->> {len(data)}|" + data.decode())
+            return (data,addr)
+        except Exception as e:
+            print(e)
+            return (None , None)
+
 
     def register(self, addr):
         with self.lock:
@@ -171,15 +167,15 @@ class Room(threading.Thread):
 
     def add_player(self, addr):
         with self.lock:
-            x, y = random.randint(100, 500), random.randint(100, 500)
-            tank = Tank(x, y, 25, 25, speed=2, hp=6)
+            x, y = random.randint(100, 800), random.randint(100, 800)
+            tank = Tank(x, y, 25 * (SCREEN_SIZE[0] / 800), 25 * (SCREEN_SIZE[1] / 650), speed=2, hp=6)
             reposition = True
             while reposition:
                 reposition = False
                 for i in self.walls:
                     if i.hitbox.colliderect(tank.get_rect()):
-                        tank.x = random.randint(100, 500)
-                        tank.y = random.randint(100, 500)
+                        tank.x = random.randint(100, 800)
+                        tank.y = random.randint(100, 800)
                         reposition = True
 
             self.original_players.append(addr)
@@ -194,10 +190,11 @@ class Room(threading.Thread):
     def handle_input(self, addr, data):
         with self.lock:
             msg = data.decode()
+            self.players_timer[addr] = time.time()
             if msg.startswith("INPUT|"):
                 key = msg.split("|", 1)[1]
                 self.inputs[addr] = key
-                self.players_timer[addr] = time.time()
+
 
 
     def run(self):
@@ -206,11 +203,9 @@ class Room(threading.Thread):
                 self.update_all()
                 self.send_state()
             else:
+                self.player_time_out()
                 for i in self.players.keys():
-                    self.sock.sendto(WAIT,i)
-                with self.lock:
-                    for addr in self.players.keys():
-                        self.players_timer[addr] = time.time()
+                    self.send(WAIT,i)
 
             time.sleep(1 / FPS)
 
@@ -237,6 +232,7 @@ class Room(threading.Thread):
                 with self.lock:
                     player.last_attack = time.time()
                     self.attacks.append((addr, Attack(player.x, player.y, player.rotation)))
+
         with self.lock:
             for addr, atk in self.attacks[:]:
                 audio = atk.update(self.walls, self.players)
@@ -248,40 +244,55 @@ class Room(threading.Thread):
                 if atk.is_out_of_bounds():
                     self.attacks.remove((addr, atk))
                     continue
+
+            for addr1 , atk1 in self.attacks[:]:
+                for addr2 , atk2 in self.attacks[:]:
+                    if atk1 != atk2 and atk1.get_rect().colliderect(atk2.get_rect()):
+                        self.attacks.remove((addr1,atk1))
+                        self.attacks.remove((addr2,atk2))
+                        self.send_sound(audio_type.HIT_PLAYER)
+
         with self.lock:
             for addr , player in list(self.players.items()):
                 if player.hp <= 0:
-                    self.sock.sendto(LOSE_GAME,addr)
+                    self.send(LOSE_GAME,addr)
                     self.remove_payer(addr)
 
             if self.player_count <= 1:
                 for addr, player in list(self.players.items()):
-                    self.sock.sendto(WIN_GAME,addr)
+                    self.send(WIN_GAME,addr)
                     self.remove_payer(addr)
 
-            if self.player_count == 0:
-                self.running = False
+        self.player_time_out()
 
+
+    def player_time_out(self):
         with self.lock:
             for addr , timer in list(self.players_timer.items()):
-                if time.time() - timer > 2:
-                    self.sock.sendto(LOSE_GAME,addr)
+                if time.time() - timer > TIME_BEFORE_REMOVE:
                     self.remove_payer(addr)
+
 
     def remove_payer(self, addr):
         if addr in list(self.players.keys()):
             del self.players[addr]
             self.server.clients.remove(addr)
             del self.players_timer[addr]
+
+            if self.max_players == self.player_count :# אם שחקן עוזב במהלך המשחק
+                self.max_players -= 1
+
             self.player_count -= 1
-            self.max_players -= 1
+
+        if self.player_count == 0:
+            self.running = False
 
 
     def send_sound(self,type):
         if not type: return
 
         for i in self.players.keys():
-            self.sock.sendto(AUDIO + str(type).encode(),i)
+            self.send(AUDIO + str(type).encode(),i)
 
 
     def send_state(self):
@@ -295,8 +306,10 @@ class Room(threading.Thread):
 
         data = msg.encode()
         for addr in self.players.keys():
-            self.sock.sendto(data, addr)
-
+            self.send(data, addr)
+    
+    def send(self,msg , addr):
+        self.sock.sendto(msg,addr)
 
 if __name__ == "__main__":
     s = Server()
