@@ -1,6 +1,4 @@
-import time
-
-import pygame, threading
+import pygame, threading , time
 from const import *
 from painter import Painter
 from Button import Button
@@ -51,12 +49,11 @@ class GameManager:
         self.client = client
         self.screen = self.create_screen()
         self.painter = Painter()
-        self.player = None
-        self.players = []
+        self.players = [] # Tank
         self.attacks = []
         self.game_state = GameState.BEFORE_GAME
         self.lock = threading.Lock()
-        self.walls = self.create_maze_walls()
+        self.walls = self.create_maze_walls(1)
         self.start_timer_screen = None
         
         self.start_game_button = Button(
@@ -84,33 +81,12 @@ class GameManager:
             2.5,1 , 'volume:'
         )
 
-    def create_maze_walls(self):
-        walls = []
-        W, H = SCREEN_SIZE
+    def create_maze_walls(self, maze_num):
 
-        # גבולות חיצוניים
-        walls.append(Wall(self.screen,0, 0, W, WALL_SIZE))
-        walls.append(Wall(self.screen,0, H - WALL_SIZE, W, WALL_SIZE))
-        walls.append(Wall(self.screen,0, 0, WALL_SIZE, H))
-        walls.append(Wall(self.screen,W - WALL_SIZE, 0, WALL_SIZE, H))
-        #קירות המבוך
-        walls.append(Wall(self.screen,W * 0.1, H * 0.45, W * 0.8, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.48, H * 0.1, WALL_SIZE, H * 0.8))
-        walls.append(Wall(self.screen,W * 0.1, H * 0.1, W * 0.25, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.1, H * 0.1, WALL_SIZE, H * 0.25))
-        walls.append(Wall(self.screen,W * 0.65, H * 0.1, W * 0.25, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.9 - WALL_SIZE, H * 0.1, WALL_SIZE, H * 0.25))
-        walls.append(Wall(self.screen,W * 0.25, H * 0.25, W * 0.15, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.6, H * 0.25, W * 0.15, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.1, H * 0.65, W * 0.25, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.1, H * 0.65, WALL_SIZE, H * 0.25))
-        walls.append(Wall(self.screen,W * 0.65, H * 0.65, W * 0.25, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.9 - WALL_SIZE, H * 0.65, WALL_SIZE, H * 0.25))
-        walls.append(Wall(self.screen,W * 0.25, H * 0.55, W * 0.15, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.6, H * 0.55, W * 0.15, WALL_SIZE))
-        walls.append(Wall(self.screen,W * 0.45, H * 0.45, W * 0.1, WALL_SIZE))
-
-        return walls
+        maze = ALL_MAZES.get(maze_num, MAZE_1)
+        return [
+            Wall(self.screen, x, y, width, height) for x, y, width, height in maze
+        ]
 
 
     def create_screen(self):
@@ -204,8 +180,21 @@ class GameManager:
         parts = msg.split("|")[1:]
 
         with self.lock:
+
+            hp_arr = [
+                i.hp for i in self.players
+            ]
+            hp_arr.sort()
+
+            rotations = [
+                i.rotation for i in self.attacks
+            ]
+
             self.players = []
             self.attacks = []
+
+
+
 
             for part in parts:
                 if part.startswith("PLAYER"):
@@ -222,3 +211,25 @@ class GameManager:
                     _, x, y, rot = part.split(",")
                     x = float(x); y = float(y); rot = float(rot)
                     self.attacks.append(AttackClient(self.screen, x, y, rot))
+
+            _hp_arr = [
+                i.hp for i in self.players
+            ]
+            _hp_arr.sort()
+
+            if len(_hp_arr) != len(hp_arr):
+                self.client.audio.play_hit_player_song()
+
+            else:
+                for i in range(len(_hp_arr)):
+                    if _hp_arr[i] != hp_arr[i]:
+                        self.client.audio.play_hit_player_song()
+                        return
+            _rotations = [
+                i.rotation for i in self.attacks
+            ]
+            if len(_rotations) != len(rotations):
+                self.client.audio.play_hit_wall_song()
+            for i in range(len(_rotations)):
+                if not _rotations[i] in rotations:
+                    self.client.audio.play_hit_wall_song()

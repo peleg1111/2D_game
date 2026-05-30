@@ -25,7 +25,7 @@ class Audio:
         pygame.mixer.set_num_channels(100)
 
         self.background = Song(BACKGROUND_SONG_PATH, 0.2)
-        self.hit_wall = Song(HIT_WALL_SONG_PATH, 2)
+        self.hit_wall = Song(HIT_WALL_SONG_PATH, 1)
         self.win = Song(WIN_SONG_PATH, 1)
         self.lose = Song(LOSE_SONG_PATH, 1.5)
         self.hit_player = Song(HIT_PLAYER_SONG_PATH, 1)
@@ -42,14 +42,17 @@ class Audio:
 
     def play_hit_wall_song(self):
         self.hit_wall.play()
+        self.hit_wall.play()
 
     def play_win_song(self):
         self.win.play()
+
 
     def play_lose_song(self):
         self.lose.play()
 
     def play_hit_player_song(self):
+        self.hit_player.play()
         self.hit_player.play()
 
 

@@ -1,4 +1,5 @@
-import socket , threading , pygame , time
+import socket , threading , pygame , time , random
+
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
@@ -12,7 +13,7 @@ class Client:
         self.lock = threading.Lock()
         threading.Thread(target=self.recv, daemon=True).start()
         self.audio = Audio()
-
+        self.last_seq_num = 0
 
     def main_loop(self):
         clock = pygame.time.Clock()
@@ -36,9 +37,12 @@ class Client:
                         self.manager.game_state = GameState.SETTINGS
 
                 elif self.manager.game_state == GameState.SETTINGS:
+
                     if self.is_clicked(self.manager.back_to_menu_button, event):
                         self.manager.game_state = GameState.BEFORE_GAME
+
                     self.manager.volume_slider.handle_event(event)
+
                     if self.manager.volume_slider.is_dragging():
                         self.audio.set_all(self.manager.volume_slider.val)
 
@@ -47,7 +51,9 @@ class Client:
             if self.manager.game_state != GameState.PLAYING:
 
                 if self.manager.game_state == GameState.WAITING:
+                    self.send(START_GAME)
                     self.send(WAIT)
+
 
                 self.manager.main_loop()
                 continue
@@ -70,6 +76,10 @@ class Client:
     def handle_msg(self, msg):
         if msg.startswith("STATE"):
             self.manager.game_state = GameState.PLAYING
+            seq_num = int(msg.split("|")[0].replace("STATE",""))
+            if seq_num < self.last_seq_num:
+                return
+            self.last_seq_num = seq_num
             self.manager.update_from_server(msg)
 
         elif msg == LOSE_GAME.decode():
@@ -80,15 +90,10 @@ class Client:
             self.manager.game_state = GameState.WIN
             self.audio.play_win_song()
 
-        elif msg.startswith(AUDIO.decode()):
-            if msg.split("|")[1] == str(audio_type.HIT_WALL):
-                self.audio.play_hit_wall_song()
-                self.audio.play_hit_wall_song()
-
-
-            elif msg.split("|")[1] == str(audio_type.HIT_PLAYER):
-                self.audio.play_hit_player_song()
-
+        elif msg.startswith(WALLS.decode()):
+            with self.lock:
+                self.manager.walls = self.manager.create_maze_walls( int( msg.split('|') [1] ) )
+                self.send('ACK')
 
     def start(self):
         self.send(START_GAME)
@@ -98,14 +103,16 @@ class Client:
     def recv(self):
         while self.run:
             if self.manager.game_state != GameState.WAITING and self.manager.game_state != GameState.PLAYING:
-                self.Wait()
+                self._clean_buffer()
             else:
                 self._recv()
 
-
-    def Wait(self):
-        time.sleep(0.2)
-
+    def _clean_buffer(self):
+        try:
+            self.sock.settimeout(TIME_BEFORE_REMOVE)
+            data, addr = self.sock.recvfrom(2048)
+        except socket.error as e:
+            self.sock.settimeout(None)
 
     def _recv(self):
         try:
@@ -120,8 +127,20 @@ class Client:
             self.manager.game_state = GameState.DISCONNECTED
 
 
-    def send(self, msg):
-        self.sock.sendto(msg.encode() if isinstance(msg , str) else msg, self.dst)
+    def send(self, msg, DROP_RATE = 0.1, CHANGE_RATE = 0.2):
+        msg = msg.encode() if isinstance(msg , str) else msg
+        num = random.random()
+        if num < DROP_RATE:# מדמה איבוד של הודעות ברשת
+            print(f"msg lost --> {msg}")
+            return
+
+        if num < CHANGE_RATE:# מדמה שינוי של הודעות ברשת
+            arr = list(msg.decode())
+            random.shuffle(arr)
+            msg = "".join(arr).encode()
+            print(f"\n\nmsg changed --> {msg}\n\n")
+
+        self.sock.sendto(msg, self.dst)
         print("send to server --> ",msg)
 
 
@@ -131,6 +150,7 @@ class Client:
             time.sleep(0.5)
             return True
         return False
+
 
 def main():
     client = Client()

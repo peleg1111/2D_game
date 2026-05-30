@@ -107,7 +107,7 @@ class Attack:
                 dot = dx * normal[0] + dy * normal[1]
                 rx = dx - 2 * dot * normal[0]
                 ry = dy - 2 * dot * normal[1]
-                self.rotation = math.degrees(math.atan2(ry, rx)) + random.randint(-5 , 6)
+                self.rotation = math.degrees(math.atan2(ry, rx)) + random.randint(-2 , 3)
                 self.bounss -= 1
                 break
 
@@ -115,10 +115,7 @@ class Attack:
             if rect.colliderect(player.get_rect()):
                 player.hp -= 1
                 self.bounss = 0
-                return audio_type.HIT_PLAYER
-        if self.bounss != ttl:
-            return audio_type.HIT_WALL
-        return None
+
 
     def is_finished(self):
         return self.bounss <= 0
@@ -132,3 +129,10 @@ class Attack:
 class Wall:
     def __init__(self, x, y, w, h):
         self.hitbox = pygame.Rect(x, y, w, h)
+        self.x = x
+        self.y = y
+        self.width = w
+        self.height = h
+
+    def str(self):
+        return f'{self.x},{self.y},{self.width},{self.height}'

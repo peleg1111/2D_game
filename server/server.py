@@ -1,6 +1,12 @@
 import socket, threading, time , random , pygame , math
 from const import *
 from server_data import Tank, Attack, Wall
+from server_UI import Server_ui
+
+"""      to do list 
+    ליצור מערכת התחברות והרשמה ---
+    להוסיף הצפנות ---
+"""
 
 class client_state:
     def __init__(self,last_time, is_active):
@@ -10,25 +16,33 @@ class client_state:
 
 class Server:
     def __init__(self, max_player_in_room = PLAYER_COUNT ):
-        self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-        self.sock.bind(("0.0.0.0", 1234))
-        print("server started on port 1234")
+
+        self.sock = self.create_sock()
         self.rooms = []
         self.lock = threading.Lock()
         self.clients = [] # addr
         self.max_players_in_room = max_player_in_room
+        self.active = True
+
+
+    def create_sock(self):
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
+        sock.bind(("0.0.0.0", 1234))
+        sock.settimeout(2)
+        print("server started on port 1234")
+        return sock
 
     def start(self):
         threading.Thread(target = self.show_state , daemon = True).start()
         threading.Thread(target = self.clean_dead_rooms , daemon = True).start()
 
-        while True:
+        while self.active:
             data , addr = self.recv()
             if not addr or not data: continue
 
             self.register(addr)
 
-            if data == START_GAME:
+            if data == START_GAME and not self.find_room(addr):
                 self.join_room(addr)
             else:
                 room = self.find_room(addr)
@@ -41,6 +55,10 @@ class Server:
             data, addr = self.sock.recvfrom(2048)
             print(f"got from{addr} -->> {len(data)}|" + data.decode())
             return (data,addr)
+
+        except socket.timeout:
+            return (None, None)
+
         except Exception as e:
             print(e)
             return (None , None)
@@ -72,6 +90,7 @@ class Server:
             room.add_player(addr)
             room.start()
             self.rooms.append(room)
+
 
     def find_room(self, addr):
         with self.lock:
@@ -115,68 +134,44 @@ class Room(threading.Thread):
         self.attacks = []      #(addr, Attack)
         self.player_count = 0
         self.running = True
-        self.walls = self.create_maze_walls()
+        self.maze_num = random.randint(1,3)
+        self.walls = self.create_maze_walls(self.maze_num)
         self.lock = threading.Lock()
         self.original_players = []# addr
+        self.players_last_msg = {} # addr --> [msg( win / lose ), time]
+        self.ack_received = set()
+        self.next_seq_num = 0
+
+    def create_maze_walls(self, maze_num):
+        maze = ALL_MAZES.get(maze_num, MAZE_1)
+        return [
+            Wall(x, y, width, height) for x, y, width, height in maze
+        ]
 
 
-    def create_maze_walls(self):
-        walls = []
-        W, H = SCREEN_SIZE
-
-        # גבולות חיצוניים
-        walls.append(Wall(0, 0, W, WALL_SIZE))  # עליון
-        walls.append(Wall(0, H - WALL_SIZE, W, WALL_SIZE))  # תחתון
-        walls.append(Wall(0, 0, WALL_SIZE, H))  # שמאל
-        walls.append(Wall(W - WALL_SIZE, 0, WALL_SIZE, H))  # ימין
-
-        # קיר מרכזי אופקי
-        walls.append(Wall(W * 0.1, H * 0.45, W * 0.8, WALL_SIZE))
-
-        # קיר מרכזי אנכי
-        walls.append(Wall(W * 0.48, H * 0.1, WALL_SIZE, H * 0.8))
-
-        # חדר שמאל עליון
-        walls.append(Wall(W * 0.1, H * 0.1, W * 0.25, WALL_SIZE))
-        walls.append(Wall(W * 0.1, H * 0.1, WALL_SIZE, H * 0.25))
-
-        # חדר ימין עליון
-        walls.append(Wall(W * 0.65, H * 0.1, W * 0.25, WALL_SIZE))
-        walls.append(Wall(W * 0.9 - WALL_SIZE, H * 0.1, WALL_SIZE, H * 0.25))
-
-        # מסדרון עליון מפותל
-        walls.append(Wall(W * 0.25, H * 0.25, W * 0.15, WALL_SIZE))
-        walls.append(Wall(W * 0.6, H * 0.25, W * 0.15, WALL_SIZE))
-
-        # חדר שמאל תחתון
-        walls.append(Wall(W * 0.1, H * 0.65, W * 0.25, WALL_SIZE))
-        walls.append(Wall(W * 0.1, H * 0.65, WALL_SIZE, H * 0.25))
-
-        # חדר ימין תחתון
-        walls.append(Wall(W * 0.65, H * 0.65, W * 0.25, WALL_SIZE))
-        walls.append(Wall(W * 0.9 - WALL_SIZE, H * 0.65, WALL_SIZE, H * 0.25))
-
-        # מסדרון תחתון מפותל
-        walls.append(Wall(W * 0.25, H * 0.55, W * 0.15, WALL_SIZE))
-        walls.append(Wall(W * 0.6, H * 0.55, W * 0.15, WALL_SIZE))
-
-        # מחיצה קטנה באמצע (לקרבות)
-        walls.append(Wall(W * 0.45, H * 0.45, W * 0.1, WALL_SIZE))
-
-        return walls
 
     def add_player(self, addr):
         with self.lock:
-            x, y = random.randint(100, 800), random.randint(100, 800)
+            x, y = random.randint(150, 700), random.randint(150, 700)
             tank = Tank(x, y, 25 * (SCREEN_SIZE[0] / 800), 25 * (SCREEN_SIZE[1] / 650), speed=2, hp=6)
             reposition = True
             while reposition:
                 reposition = False
                 for i in self.walls:
                     if i.hitbox.colliderect(tank.get_rect()):
-                        tank.x = random.randint(100, 800)
-                        tank.y = random.randint(100, 800)
+                        tank.x = random.randint(100, SCREEN_SIZE[0] - 100)
+                        tank.y = tank.y = random.randint(100, SCREEN_SIZE[1] - 100)
                         reposition = True
+
+                for _addr,_tank in self.players.items():
+                    if _addr == addr: continue
+                    distance = math.sqrt((_tank.x - tank.x)**2 + (_tank.y - tank.y)**2)
+                    print(f'{distance = } m')
+                    if distance < 200 and addr != _addr:
+                        tank.x = random.randint(100, SCREEN_SIZE[0] - 100)
+                        tank.y = tank.y = random.randint(100, SCREEN_SIZE[1] - 100)
+                        reposition = True
+
 
             self.original_players.append(addr)
 
@@ -185,7 +180,7 @@ class Room(threading.Thread):
             self.player_count += 1
             self.players_timer[addr] = time.time()
             print("player joined room:", addr)
-
+            self.safe_send(addr, WALLS + str(self.maze_num).encode())
 
     def handle_input(self, addr, data):
         with self.lock:
@@ -195,9 +190,14 @@ class Room(threading.Thread):
                 key = msg.split("|", 1)[1]
                 self.inputs[addr] = key
 
+            if msg == 'ACK':
+                self.ack_received.add(addr)
+
 
 
     def run(self):
+        threading.Thread( target = self.send_end_msg ,daemon = True ).start()
+
         while self.running:
             if self.player_count == self.max_players:
                 self.update_all()
@@ -208,7 +208,6 @@ class Room(threading.Thread):
                     self.send(WAIT,i)
 
             time.sleep(1 / FPS)
-
 
     def update_all(self):
 
@@ -231,12 +230,17 @@ class Room(threading.Thread):
             if  "!" in key and time.time() - player.last_attack > player.cooldown:
                 with self.lock:
                     player.last_attack = time.time()
-                    self.attacks.append((addr, Attack(player.x, player.y, player.rotation)))
+                    atk = Attack(player.x, player.y, player.rotation)
+                    for wall in self.walls:
+                        if wall.hitbox.colliderect(atk.get_rect()):
+                            atk = None
+                            break
+                    if atk:
+                        self.attacks.append((addr, Attack(player.x, player.y, player.rotation)))
 
         with self.lock:
             for addr, atk in self.attacks[:]:
-                audio = atk.update(self.walls, self.players)
-                self.send_sound(audio)
+                atk.update(self.walls, self.players)
 
                 if atk.is_finished():
                     self.attacks.remove((addr,atk))
@@ -250,16 +254,17 @@ class Room(threading.Thread):
                     if atk1 != atk2 and atk1.get_rect().colliderect(atk2.get_rect()):
                         self.attacks.remove((addr1,atk1))
                         self.attacks.remove((addr2,atk2))
-                        self.send_sound(audio_type.HIT_PLAYER)
 
         with self.lock:
             for addr , player in list(self.players.items()):
                 if player.hp <= 0:
-                    self.send(LOSE_GAME,addr)
+                    self.players_last_msg[addr] = [LOSE_GAME , time.time()]
+                    self.send(LOSE_GAME, addr)
                     self.remove_payer(addr)
 
             if self.player_count <= 1:
                 for addr, player in list(self.players.items()):
+                    self.players_last_msg[addr] = [WIN_GAME , time.time()]
                     self.send(WIN_GAME,addr)
                     self.remove_payer(addr)
 
@@ -273,13 +278,43 @@ class Room(threading.Thread):
                     self.remove_payer(addr)
 
 
+    def send_end_msg(self):
+        while True:
+            with self.lock:
+                for addr, (msg, ttl) in list(self.players_last_msg.items()):
+                    self.send(msg, addr)
+                    if time.time() - ttl > 3:
+                        del self.players_last_msg[addr]
+            if not self.players_last_msg and not self.running:
+                return
+
+            time.sleep(1 / FPS)
+
+
+    def safe_send(self,addr,msg):
+        threading.Thread(target=self._safe_send,args=(addr,msg), daemon= True).start()
+
+
+    def _safe_send(self, addr, msg):
+        deadline = time.time() + 10  # timeout
+        while time.time() < deadline:
+            with self.lock:
+                if addr not in self.players:  # השחקן התנתק
+                    return
+                if addr in self.ack_received:
+                    self.ack_received.discard(addr)
+                    return
+                self.send(msg, addr)
+            time.sleep(1 / FPS)
+
+
     def remove_payer(self, addr):
         if addr in list(self.players.keys()):
             del self.players[addr]
             self.server.clients.remove(addr)
             del self.players_timer[addr]
 
-            if self.max_players == self.player_count :# אם שחקן עוזב במהלך המשחק
+            if self.max_players == self.player_count : # אם שחקן עוזב במהלך המשחק
                 self.max_players -= 1
 
             self.player_count -= 1
@@ -288,16 +323,9 @@ class Room(threading.Thread):
             self.running = False
 
 
-    def send_sound(self,type):
-        if not type: return
-
-        for i in self.players.keys():
-            self.send(AUDIO + str(type).encode(),i)
-
-
     def send_state(self):
-        msg = "STATE|"
-
+        msg = f"STATE{self.next_seq_num}|"
+        self.next_seq_num += 1
         for addr, p in self.players.items():
             msg += f"PLAYER,{p.x},{p.y},{p.width},{p.height},{p.hp},{p.rotation}|"
 
@@ -307,10 +335,32 @@ class Room(threading.Thread):
         data = msg.encode()
         for addr in self.players.keys():
             self.send(data, addr)
-    
-    def send(self,msg , addr):
+
+
+    def send(self,msg , addr,DROP_RATE = 0.3, CHANGE_RATE = 0.6):
+        msg = msg.encode() if isinstance(msg, str) else msg
+
+        num = random.random()
+        if num < DROP_RATE:  # מדמה איבוד של הודעות ברשת
+            print(f"msg lost --> {msg}")
+            return
+
+        if num < CHANGE_RATE:  # מדמה שינוי של הודעות ברשת
+            arr = list(msg.decode())
+            random.shuffle(arr)
+            msg = "".join(arr).encode()
+            print(f"\n\nmsg changed --> {msg}\n\n")
+
+        print(f"sent --> {addr} --> {msg}")
         self.sock.sendto(msg,addr)
 
+
+
+
 if __name__ == "__main__":
-    s = Server()
-    s.start()
+    server = Server()
+    server_ui = Server_ui(server)
+    t = threading.Thread(target=server.start, daemon= True)
+    t.start()
+    server_ui.mainloop()
+    t.join()

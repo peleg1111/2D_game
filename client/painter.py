@@ -45,7 +45,7 @@ class Painter:
             pygame.draw.rect(
                 player.screen,
                 (255, 0, 0),
-                (player.x - player.width + i*8, player.y - player.height*2 + 20, 6, 6)
+                (player.x - player.width + i*8, player.y - player.height*2 + 20, 9, 7)
             )
 
     def draw_attack(self, attack):

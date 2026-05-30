@@ -12,7 +12,7 @@ class Slider:
 
         self.txt = txt
 
-        self.track_rect = pygame.Rect(x, y, width, 9)
+        self.rect = pygame.Rect(x, y, width, 9)
         self.handle_radius = 12
         self.current_x = self.get_x_by_val(start_val)
 
@@ -43,7 +43,7 @@ class Slider:
 
 
     def draw(self, screen):
-        pygame.draw.rect(screen, (80, 80, 80), self.track_rect, border_radius=3)
+        pygame.draw.rect(screen, (80, 80, 80), self.rect, border_radius=3)
 
         x = pygame.Rect(self.x, self.y, self.current_x - self.x, 9)
         pygame.draw.rect(screen, (100, 150, 255), x, border_radius=3)
