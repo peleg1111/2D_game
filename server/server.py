@@ -1,12 +1,9 @@
+__author__ = 'Peleg Etzioni'
 import socket, threading, time , random , pygame , math
 from const import *
 from server_data import Tank, Attack, Wall
 from server_UI import Server_ui
 
-"""      to do list 
-    ליצור מערכת התחברות והרשמה ---
-    להוסיף הצפנות ---
-"""
 
 class client_state:
     def __init__(self,last_time, is_active):
@@ -118,8 +115,6 @@ class Server:
               f"default players count in each room: {self.max_players_in_room}\n"
               f"=================================\n"
               f"{state}\n")
-
-
 
 
 class Room(threading.Thread):

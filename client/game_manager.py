@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import pygame, threading , time
 from const import *
 from painter import Painter

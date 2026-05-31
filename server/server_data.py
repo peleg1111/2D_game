@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import random
 from enum import Enum
 

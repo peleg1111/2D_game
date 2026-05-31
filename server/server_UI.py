@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import tkinter as tk
 
 class Server_ui(tk.Tk):

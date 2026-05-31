@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 from enum import Enum
 
 # קבועים
@@ -7,7 +8,7 @@ SCREEN_COLOR = (50, 50, 50)
 FPS = 80
 PLAYER_COUNT = 2
 WALL_SIZE = 14 * (SCREEN_SIZE[1] / 650) # עובי הקיר
-IMAGE_ROOT = 'C:\\Users\\Peleg\\PycharmProjects\\my_game\\images\\'
+IMAGE_ROOT = 'images\\'
 TIME_BETWEEN_STATES = 6 # זמן המתנה במעבר בין מסכים כמו מסך הפסד למשך הראשי
 TIME_BEFORE_REMOVE = 3# [sec]
 
@@ -30,7 +31,7 @@ WALLS = b'WALLS|'
 
 
 # מוזיקה
-SONG_PATH = "C:\\Users\\Peleg\\PycharmProjects\\my_game\\audio\\"
+SONG_PATH = "audio\\"
 BACKGROUND_SONG_PATH = 'background_song.mp3'
 HIT_WALL_SONG_PATH = 'hit_wall.mp3'
 WIN_SONG_PATH = 'win.mp3'

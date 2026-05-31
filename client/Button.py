@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import pygame
 
 class Button:

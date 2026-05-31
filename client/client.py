@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import socket , threading , pygame , time , random , sys
 
 from const import *

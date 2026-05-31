@@ -1,3 +1,4 @@
+__author__ = 'Peleg Etzioni'
 import pygame, math , time
 from const import *
 
@@ -186,4 +187,3 @@ class Painter:
 
 
 
-    
