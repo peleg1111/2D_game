@@ -1,12 +1,12 @@
-import socket , threading , pygame , time , random
+import socket , threading , pygame , time , random , sys
 
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
 
 class Client:
-    def __init__(self):
-        self.dst = ADDR_SERVER
+    def __init__(self,ip , port):
+        self.dst = (ip,port)
         self.sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         self.manager = GameManager(self)
         self.run = True
@@ -127,7 +127,7 @@ class Client:
             self.manager.game_state = GameState.DISCONNECTED
 
 
-    def send(self, msg, DROP_RATE = 0.1, CHANGE_RATE = 0.2):
+    def send(self, msg, DROP_RATE = 0.1, CHANGE_RATE = 0.14):
         msg = msg.encode() if isinstance(msg , str) else msg
         num = random.random()
         if num < DROP_RATE:# מדמה איבוד של הודעות ברשת
@@ -153,7 +153,14 @@ class Client:
 
 
 def main():
-    client = Client()
+
+    if len(sys.argv) == 3:
+        ip = sys.argv[1]
+        port = int(sys.argv[2])
+    else:
+        ip,port = ADDR_SERVER
+
+    client = Client(ip,port)
     client.main_loop()
 
 

@@ -119,6 +119,9 @@ class GameManager:
 
             case GameState.WAITING:
                 self.painter.draw_waiting_screen(self.screen)
+                self.players = []
+                self.attacks = []
+                self.client.last_seq_num = 0
 
 
 
