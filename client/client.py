@@ -4,6 +4,8 @@ import socket , threading , pygame , time , random , sys
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
+from encryption.encryption_manager import *
+from encryption_client import ClientHandshake
 
 class Client:
     def __init__(self,ip , port):
@@ -12,9 +14,25 @@ class Client:
         self.manager = GameManager(self)
         self.run = True
         self.lock = threading.Lock()
+        self.aes = None
+        threading.Thread(target=self.do_handshake, daemon=True).start()
         threading.Thread(target=self.recv, daemon=True).start()
         self.audio = Audio()
         self.last_seq_num = 0
+        self.ack_received = []
+
+
+    def do_handshake(self):
+        self.manager.game_state = GameState.ENCRYPTION
+        while self.aes is None:
+            hs = ClientHandshake(self.sock, self.dst)
+            self.aes = hs.run()
+            if self.aes is None:
+                print("Client --> encryption handshake failed")
+
+        self.manager.game_state = GameState.BEFORE_GAME
+        print("Client --> AES key")
+
 
     def main_loop(self):
         clock = pygame.time.Clock()
@@ -53,7 +71,6 @@ class Client:
 
                 if self.manager.game_state == GameState.WAITING:
                     self.send(START_GAME)
-                    self.send(WAIT)
 
 
                 self.manager.main_loop()
@@ -94,7 +111,9 @@ class Client:
         elif msg.startswith(WALLS.decode()):
             with self.lock:
                 self.manager.walls = self.manager.create_maze_walls( int( msg.split('|') [1] ) )
-                self.send('ACK')
+                self.send('ACK|'+ WALLS.decode())
+
+
 
     def start(self):
         self.send(START_GAME)
@@ -103,46 +122,70 @@ class Client:
 
     def recv(self):
         while self.run:
-            if self.manager.game_state != GameState.WAITING and self.manager.game_state != GameState.PLAYING:
-                self._clean_buffer()
-            else:
+            if self.manager.game_state == GameState.WAITING or self.manager.game_state == GameState.PLAYING:
                 self._recv()
+
+            elif self.manager.game_state == GameState.ENCRYPTION:
+                pass
+
+            else:
+                self._clean_buffer()
+
 
     def _clean_buffer(self):
         try:
-            self.sock.settimeout(TIME_BEFORE_REMOVE)
+            self.sock.settimeout(0.3)
+            self.send(WAIT)  # כדי שהשרת ידע שהלקוח מחובר גם לאחר ההתחברות
             data, addr = self.sock.recvfrom(2048)
+
         except socket.error as e:
             self.sock.settimeout(None)
 
     def _recv(self):
         try:
             self.sock.settimeout(TIME_BEFORE_REMOVE)
-            data, addr = self.sock.recvfrom(2048)
+            data, addr = self.sock.recvfrom(4096)
+
+            if self.aes:
+                try:
+                    data = self.aes.decrypt(data)
+                except Exception:
+                    return
+
             msg = data.decode()
-            print(f"got from server -->> {len(data)}|{msg}")
+            print(f"got from server -->> {len(msg)}|{msg}")
             self.handle_msg(msg)
+
         except socket.error as e:
             print(e)
             self.sock.settimeout(None)
             self.manager.game_state = GameState.DISCONNECTED
 
 
-    def send(self, msg, DROP_RATE = 0.1, CHANGE_RATE = 0.14):
-        msg = msg.encode() if isinstance(msg , str) else msg
+    def send(self, msg, DROP_RATE=0.1, CHANGE_RATE=0.14):
+        msg = msg.encode() if isinstance(msg, str) else msg
+
         num = random.random()
-        if num < DROP_RATE:# מדמה איבוד של הודעות ברשת
+        if num < DROP_RATE:
             print(f"msg lost --> {msg}")
             return
+        if num < CHANGE_RATE:
 
-        if num < CHANGE_RATE:# מדמה שינוי של הודעות ברשת
-            arr = list(msg.decode())
-            random.shuffle(arr)
-            msg = "".join(arr).encode()
-            print(f"\n\nmsg changed --> {msg}\n\n")
+            if not self.aes:
+                arr = list(msg.decode())
+                random.shuffle(arr)
+                msg = "".join(arr).encode()
+                print(f"\n\nmsg changed --> {msg}\n\n")
+
+        print("send to server --> ", msg)
+        if self.aes:
+            msg = self.aes.encrypt(msg)
+
+        if DEBUG:
+            print(f"encrypted msg --> {msg}\n\n")
 
         self.sock.sendto(msg, self.dst)
-        print("send to server --> ",msg)
+
 
 
     def is_clicked(self, button, event):

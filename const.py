@@ -11,7 +11,7 @@ WALL_SIZE = 14 * (SCREEN_SIZE[1] / 650) # עובי הקיר
 IMAGE_ROOT = 'images\\'
 TIME_BETWEEN_STATES = 6 # זמן המתנה במעבר בין מסכים כמו מסך הפסד למשך הראשי
 TIME_BEFORE_REMOVE = 3# [sec]
-
+ENCRIPTION_PATH = 'encryption_key\\'
 
 # רשת
 ADDR_SERVER = ("127.0.0.1", 1234)
@@ -27,8 +27,13 @@ LOSE_GAME = b"LOSE"
 WIN_GAME = b"WIN"
 WAIT = b"WAIT"
 AUDIO = b'AUDIO|'
-WALLS = b'WALLS|'
+WALLS = b'WALLS'
 
+DEBUG = True
+ENC_HELLO = b"ENC_HELLO"
+ENC_PARAMS = b"ENC_PARAMS"
+ENC_PUBKEY = b"ENC_PUBKEY"
+ENC_DONE = b"ENC_DONE"
 
 # מוזיקה
 SONG_PATH = "audio\\"

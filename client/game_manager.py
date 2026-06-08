@@ -6,13 +6,14 @@ from Button import Button
 from Slider import Slider
 
 class GameState(Enum):
-    WIN = -1
-    LOSE = 0
-    BEFORE_GAME = 1
-    WAITING = 2
-    PLAYING = 3
-    DISCONNECTED = 4
-    SETTINGS = 5
+    WIN = 0
+    LOSE = 1
+    BEFORE_GAME = 2
+    WAITING = 3
+    PLAYING = 4
+    DISCONNECTED = 5
+    SETTINGS = 6
+    ENCRYPTION = 7
 
 class Wall:
     def __init__(self, screen, x, y, width, height):
@@ -52,9 +53,9 @@ class GameManager:
         self.painter = Painter()
         self.players = [] # Tank
         self.attacks = []
-        self.game_state = GameState.BEFORE_GAME
+        self.game_state = GameState.ENCRYPTION
         self.lock = threading.Lock()
-        self.walls = self.create_maze_walls(1)
+        self.walls = None
         self.start_timer_screen = None
         
         self.start_game_button = Button(
@@ -102,7 +103,17 @@ class GameManager:
 
 
     def update_screen(self):
+
+        ttl = time.time() + TIME_BEFORE_REMOVE
+        while self.walls is None and time.time() < ttl :
+            time.sleep(0.1)
+
+        if self.walls is None:
+            self.game_state = GameState.DISCONNECTED
+            return
+
         self.painter.draw_Background(self.screen)
+
         for wall in self.walls:
             self.painter.draw_wall(wall)
 
@@ -177,6 +188,8 @@ class GameManager:
                 self.back_to_menu_button.draw(self.screen)
                 self.volume_slider.draw(self.screen)
 
+            case GameState.ENCRYPTION:
+                self.painter.draw_encryption_screen(self.screen)
         pygame.display.flip()
 
     def update_from_server(self, msg):

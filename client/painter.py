@@ -76,7 +76,7 @@ class Painter:
         screen.fill((30, 30, 30))
         screen.blit(self.wait_screen, (0, 0))
         font = pygame.font.SysFont(None, 70)
-        text = font.render("waiting for another player", True, (255, 255, 255))
+        text = font.render("waiting for another player" + (int(time.time())%3 + 1) * '.', True, (255, 255, 255))
         screen.blit(text, (SCREEN_SIZE[0] // 2 - text.get_width() // 2, SCREEN_SIZE[1] // 2 - 120))
         self.animation_dots(screen)
 
@@ -163,6 +163,16 @@ class Painter:
             y += surface.get_height() + 6
 
 
+    def draw_encryption_screen(self, screen):
+
+        screen.fill((30, 30, 30))
+        screen.blit(self.start_screen, (0, 0))
+        font = pygame.font.SysFont(None, 70)
+        text1 = font.render("handle encryption" + (int(time.time())%3 + 1) * '.', True, (0, 0, 0))
+        screen.blit(text1, (SCREEN_SIZE[0] // 2 - text1.get_width() // 2, SCREEN_SIZE[1] // 2 - 160))
+        self.animation_dots(screen)
+
+
     def animation_dots(self, screen):
         t = time.time()
         radius = 20
@@ -179,11 +189,8 @@ class Painter:
         base_x2 = SCREEN_SIZE[0] // 5 - spacing
         y3 = SCREEN_SIZE[0] * 0.93
 
-        for i in range(10):
-            offset = math.sin(t * 3 + i) * 10
+        for i in range(7):
+            offset = math.sin(t * 3 + i) * 7
             pygame.draw.circle(screen, (245, 221, 19), (y2 + offset, base_x2 + i * spacing), radius)
             pygame.draw.circle(screen, (245, 221, 19), (y3 + offset, base_x2 + i * spacing), radius)
-
-
-
 

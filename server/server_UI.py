@@ -21,7 +21,7 @@ class Server_ui(tk.Tk):
             bg="#2a2a2a", fg="#d4d4d4",
             relief=tk.FLAT, state=tk.DISABLED,
             padx=12, pady=10,
-            yscrollcommand=scrollbar.set
+            yscrollcommand= scrollbar.set
         )
         self.text_box.pack(fill=tk.BOTH, expand=True)
         scrollbar.config(command=self.text_box.yview)

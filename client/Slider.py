@@ -39,7 +39,7 @@ class Slider:
             self.dragging = False
 
         elif event.type == pygame.MOUSEMOTION and self.dragging:
-            self.current_x = max(self.x, min(self.x + self.width, event.pos[0]))# מעדכן את המיקום תוך שמירה על הגבולות
+            self.current_x = max(self.x, min(self.x + self.width, event.pos[0])) # מעדכן את המיקום תוך שמירה על הגבולות
             self.val = self.get_val()
 
 
