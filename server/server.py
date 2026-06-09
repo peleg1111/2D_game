@@ -43,6 +43,7 @@ class Server:
 
             if addr not in self.aes:
                 print(f"server ignoring unencrypted msg from {addr}")
+                self.send(NOT_ENCRYPTED,addr)
                 continue
 
             self.register(addr, data)
@@ -54,6 +55,27 @@ class Server:
                 if room:
                     room.handle_input(addr, data)
 
+
+    def send(self,msg , addr,DROP_RATE = 0.1, CHANGE_RATE = 0.14):
+        msg = msg.encode() if isinstance(msg, str) else msg
+
+        num = random.random()
+        if num < DROP_RATE:  # מדמה איבוד של הודעות ברשת
+            print(f"msg lost --> {msg}")
+            return
+
+        if num < CHANGE_RATE:  # מדמה שינוי של הודעות ברשת
+            arr = list(msg.decode())
+            random.shuffle(arr)
+            msg = "".join(arr).encode()
+            print(f"\n\nmsg changed --> {msg}\n\n")
+
+        print(f"sent --> {addr} --> {msg}")
+
+        if not self.aes.get(addr, None) is None:
+            msg = self.server.aes[addr].encrypt(msg)
+
+        self.sock.sendto(msg,addr)
 
     def remove_dead_players(self):
         threading.Thread(target=self._remove_dead_players, daemon=True).start()

@@ -24,6 +24,7 @@ class Client:
 
     def do_handshake(self):
         self.manager.game_state = GameState.ENCRYPTION
+        self.aes = None
         while self.aes is None:
             hs = ClientHandshake(self.sock, self.dst)
             self.aes = hs.run()
@@ -138,6 +139,9 @@ class Client:
             self.send(WAIT)  # כדי שהשרת ידע שהלקוח מחובר גם לאחר ההתחברות
             data, addr = self.sock.recvfrom(2048)
 
+            if data == NOT_ENCRYPTED and self.manager.game_state != GameState.ENCRYPTION:
+                threading.Thread(target= self.do_handshake , daemon= True).start()
+
         except socket.error as e:
             self.sock.settimeout(None)
 
@@ -155,6 +159,7 @@ class Client:
             msg = data.decode()
             print(f"got from server -->> {len(msg)}|{msg}")
             self.handle_msg(msg)
+
 
         except socket.error as e:
             print(e)

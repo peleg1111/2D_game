@@ -1,7 +1,7 @@
 __author__ = 'Peleg Etzioni'
 
 import socket
-import time
+import time , random
 from encryption.encryption_manager import DHManager, AESManager
 from const import *
 
@@ -24,7 +24,7 @@ class ClientHandshake:
         self.sock.settimeout(HANDSHAKE_RETRY)
 
         while time.time() < deadline and dh is None:
-            self.sock.sendto(ENC_HELLO, self.dst)
+            self.send(ENC_HELLO)
             if DEBUG:
                 print("Handshake --> sent ENC_HELLO")
 
@@ -67,7 +67,7 @@ class ClientHandshake:
         self.sock.settimeout(HANDSHAKE_RETRY)
 
         while time.time() < _deadline:
-            self.sock.sendto(msg, self.dst)
+            self.send(msg)
             if DEBUG:
                 print("Handshake --> sent/resent ENC_PUBKEY")
 
@@ -96,3 +96,20 @@ class ClientHandshake:
             print("Handshake --> handshake failed: timeout")
         self.sock.settimeout(None)
         return None
+
+    def send(self,msg ,DROP_RATE = 0.1, CHANGE_RATE = 0.14):
+        msg = msg.encode() if isinstance(msg, str) else msg
+
+        num = random.random()
+        if num < DROP_RATE:  # מדמה איבוד של הודעות ברשת
+            print(f"msg lost --> {msg}")
+            return
+
+        if num < CHANGE_RATE:  # מדמה שינוי של הודעות ברשת
+            arr = list(msg.decode())
+            random.shuffle(arr)
+            msg = "".join(arr).encode()
+            print(f"\n\nmsg changed --> {msg}\n\n")
+
+        print(f"sent --> {self.dst} --> {msg}")
+        self.sock.sendto(msg,self.dst)

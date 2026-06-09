@@ -3,6 +3,7 @@ __author__ = 'Peleg Etzioni'
 import threading
 import time
 import socket
+import random
 from encryption.encryption_manager import DHManager, AESManager
 from const import *
 
@@ -52,7 +53,7 @@ class Server_encryption:
                 hand_shake = self.clients[addr]
 
                 if time.time() - hand_shake.last_sent > RESEND_TIME:
-                    self.sock.sendto(hand_shake.params_msg, addr)
+                    self.send(hand_shake.params_msg,addr)
                     hand_shake.last_sent = time.time()
                     if DEBUG:
                         print(f"Handshake --> resent ENC_PARAMS to {addr}")
@@ -71,7 +72,7 @@ class Server_encryption:
             hand_shake = Client_handshake(addr, dh, params_msg)
             self.clients[addr] = hand_shake
 
-        self.sock.sendto(params_msg, addr)
+        self.send(params_msg,addr)
         hand_shake.last_sent = time.time()
         if DEBUG:
             print(f"Handshake --> sent ENC_PARAMS to {addr}")
@@ -97,7 +98,7 @@ class Server_encryption:
                 return
 
         if aes and hand_shake and hand_shake.done:
-            self.sock.sendto(ENC_DONE, addr)
+            self.send(ENC_DONE,addr)
             if DEBUG:
                 print(f" Handshake --> encryption with {addr} established successfully")
 
@@ -110,3 +111,21 @@ class Server_encryption:
                            if hs.done or now > hs.deadline]
                 for a in expired:
                     del self.clients[a]
+
+
+    def send(self,msg , addr,DROP_RATE = 0.1, CHANGE_RATE = 0.14):
+        msg = msg.encode() if isinstance(msg, str) else msg
+
+        num = random.random()
+        if num < DROP_RATE:  # מדמה איבוד של הודעות ברשת
+            print(f"msg lost --> {msg}")
+            return
+
+        if num < CHANGE_RATE:  # מדמה שינוי של הודעות ברשת
+            arr = list(msg.decode())
+            random.shuffle(arr)
+            msg = "".join(arr).encode()
+            print(f"\n\nmsg changed --> {msg}\n\n")
+
+        print(f"sent --> {addr} --> {msg}")
+        self.sock.sendto(msg,addr)
