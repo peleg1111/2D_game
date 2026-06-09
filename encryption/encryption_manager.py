@@ -1,9 +1,14 @@
-import os
+import os,sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from cryptography.hazmat.primitives import hashes, serialization
 from cryptography.hazmat.primitives.asymmetric import dh
 from cryptography.hazmat.primitives.kdf.hkdf import HKDF
 from cryptography.hazmat.primitives.ciphers.aead import AESGCM
-from  const import ENCRIPTION_PATH
+from const import ENCRIPTION_PATH
+
 
 class DHManager:
 
@@ -101,13 +106,7 @@ class DHManager:
 
 
     @staticmethod
-    def bytes_to_public_key(data):
-
-        return serialization.load_pem_public_key(data)
-
-    @staticmethod
     def bytes_to_parameters(data):
-
         return serialization.load_pem_parameters(data)
 
 

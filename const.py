@@ -1,5 +1,9 @@
 __author__ = 'Peleg Etzioni'
 from enum import Enum
+import os, sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
 
 # קבועים
 SCREEN_SIZE = (1200, 750)
@@ -19,15 +23,12 @@ ADDR_SERVER = ("127.0.0.1", 1234)
 
 # הודעות
 START_GAME = b"START"
-END_CONACTION = b"END_CONACTION"
-GAME = b"GAME"
-INFO = b"INFO"
 WAIT = b"WAIT"
 LOSE_GAME = b"LOSE"
 WIN_GAME = b"WIN"
-WAIT = b"WAIT"
-AUDIO = b'AUDIO|'
 WALLS = b'WALLS'
+STATE = "STATE"
+INPUT = b"INPUT|"
 
 DEBUG = True
 ENC_HELLO = b"ENC_HELLO"

@@ -1,6 +1,11 @@
 __author__ = 'Peleg Etzioni'
-import pygame
+import pygame , sys , os
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from const import *
+
 
 class Song:
     def __init__(self, song_path, volume):
@@ -22,10 +27,10 @@ class Song:
 
 class Audio:
     def __init__(self):
-        pygame.mixer.init(frequency=44100, size=-16, channels=2, buffer=512)
+        pygame.mixer.init()
         pygame.mixer.set_num_channels(100)
 
-        self.background = Song(BACKGROUND_SONG_PATH, 0.2)
+        self.background = Song(BACKGROUND_SONG_PATH, 0.5)
         self.hit_wall = Song(HIT_WALL_SONG_PATH, 1)
         self.win = Song(WIN_SONG_PATH, 1)
         self.lose = Song(LOSE_SONG_PATH, 1.5)

@@ -1,6 +1,11 @@
 __author__ = 'Peleg Etzioni'
-import pygame, math , time
+import pygame, math , time, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from const import *
+
 
 class Painter:
     def __init__(self):
@@ -52,7 +57,6 @@ class Painter:
     def draw_attack(self, attack):
         img = pygame.transform.scale(self.attack_img, (80 * (SCREEN_SIZE[1] / 650), 80 * (SCREEN_SIZE[1] / 650)))
         img = pygame.transform.rotate(img, -attack.rotation)
-
 
         rect = img.get_rect(center=(attack.x, attack.y))
 

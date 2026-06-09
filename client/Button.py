@@ -1,5 +1,8 @@
 __author__ = 'Peleg Etzioni'
-import pygame
+import pygame, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
 
 class Button:
     def __init__(self, x, y, width, height, text, font, color, color_hover):
@@ -25,7 +28,7 @@ class Button:
         screen.blit(text, text_rect)
 
     def is_clicked(self, event):
-        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:
+        if event.type == pygame.MOUSEBUTTONDOWN and event.button == 1:# לחיצה על העכבר בלחצן ימני
             if self.rect.collidepoint(event.pos):
                 return True
         return False

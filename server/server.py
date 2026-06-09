@@ -1,9 +1,14 @@
 __author__ = 'Peleg Etzioni'
-import socket, threading, time, random, pygame, math
+import socket, threading, time, random, pygame, math, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from const import *
 from encryption_server import Server_encryption
 from server_UI import Server_ui
 from server_room import Room
+
 
 
 class Server:
@@ -77,6 +82,7 @@ class Server:
 
         self.sock.sendto(msg,addr)
 
+
     def remove_dead_players(self):
         threading.Thread(target=self._remove_dead_players, daemon=True).start()
 
@@ -147,10 +153,12 @@ class Server:
                 if room.player_count < room.max_players:
                     room.add_player(addr)
                     return
+
             room = Room(self.sock, self, self.max_players_in_room)
             room.add_player(addr)
             room.start()
             self.rooms.append(room)
+
 
     def find_room(self, addr):
         with self.lock:
@@ -176,7 +184,7 @@ class Server:
 
 
 def main():
-    server    = Server()
+    server = Server()
     server_ui = Server_ui(server)
     t = threading.Thread(target=server.start, daemon=True)
     t.start()

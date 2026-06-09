@@ -1,9 +1,14 @@
 __author__ = 'Peleg Etzioni'
-import pygame, threading , time
+import pygame, threading , time, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from const import *
 from painter import Painter
 from Button import Button
 from Slider import Slider
+
 
 class GameState(Enum):
     WIN = 0

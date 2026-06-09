@@ -1,7 +1,11 @@
 __author__ = 'Peleg Etzioni'
 
 import socket
-import time , random
+import time , random, sys, os
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from encryption.encryption_manager import DHManager, AESManager
 from const import *
 

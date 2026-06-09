@@ -1,5 +1,8 @@
 __author__ = 'Peleg Etzioni'
-import tkinter as tk
+import tkinter as tk, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
 
 class Server_ui(tk.Tk):
     def __init__(self, server):

@@ -1,6 +1,11 @@
-from const import *
-import time , random , threading, socket , os , math
+import time , random , threading, socket , os, sys , math
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 from server_data import Tank, Attack, Wall
+from const import *
+
 
 class Room(threading.Thread):
     def __init__(self, sock, server, max_player ):
@@ -29,12 +34,12 @@ class Room(threading.Thread):
         ]
 
 
-
     def add_player(self, addr):
         with self.lock:
             x, y = random.randint(150, 700), random.randint(150, 700)
             tank = Tank(x, y, 25 * (SCREEN_SIZE[0] / 800), 25 * (SCREEN_SIZE[1] / 650), speed=2, hp=6)
             reposition = True
+
             while reposition:
                 reposition = False
                 for i in self.walls:
@@ -65,9 +70,10 @@ class Room(threading.Thread):
 
     def handle_input(self, addr, data):
         with self.lock:
+
             msg = data.decode()
             self.players_timer[addr] = time.time()
-            if msg.startswith("INPUT|"):
+            if msg.startswith(INPUT.decode()):
                 key = msg.split("|", 1)[1]
                 self.inputs[addr] = key
 
@@ -77,8 +83,6 @@ class Room(threading.Thread):
                     self.ack_received[ack_type] = []
                 if addr not in self.ack_received[ack_type]:
                     self.ack_received[ack_type].append(addr)
-
-
 
 
     def run(self):
@@ -95,6 +99,7 @@ class Room(threading.Thread):
                         self.send(WAIT,i)
 
             time.sleep(1 / FPS)
+
 
     def update_all(self):
 
@@ -215,7 +220,7 @@ class Room(threading.Thread):
 
 
     def send_state(self):
-        msg = f"STATE{self.next_seq_num}|"
+        msg = f"{STATE}{self.next_seq_num}|"
         self.next_seq_num += 1
         for addr, p in self.players.items():
             msg += f"PLAYER,{p.x},{p.y},{p.width},{p.height},{p.hp},{p.rotation}|"
@@ -228,7 +233,7 @@ class Room(threading.Thread):
             self.send(data, addr)
 
 
-    def send(self,msg , addr,DROP_RATE = 0.1, CHANGE_RATE = 0.14):
+    def send(self,msg , addr, DROP_RATE = 0.1, CHANGE_RATE = 0.14):
         msg = msg.encode() if isinstance(msg, str) else msg
 
         num = random.random()

@@ -1,9 +1,13 @@
 __author__ = 'Peleg Etzioni'
-import random
+import random, os, sys
 from enum import Enum
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
 
 import pygame, math , time
 from const import *
+
 
 class Tank:
     def __init__(self, x, y, width, height, speed, hp):
@@ -48,18 +52,16 @@ class Tank:
                 self.y = old_y
                 rect = self.get_rect()
 
+
     def rotate(self, delta):
         self.rotation += delta
+
 
     def get_rect(self):
         return pygame.Rect(self.x - self.width/2,
                            self.y - self.height/2,
                            self.width,
                            self.height)
-
-    def is_hit_by(self, atk):
-        rect = self.get_rect()
-        return rect.collidepoint(atk.x, atk.y)
 
 
 class Attack:
@@ -134,6 +136,3 @@ class Wall:
         self.y = y
         self.width = w
         self.height = h
-
-    def str(self):
-        return f'{self.x},{self.y},{self.width},{self.height}'

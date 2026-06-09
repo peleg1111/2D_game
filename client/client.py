@@ -1,11 +1,16 @@
 __author__ = 'Peleg Etzioni'
-import socket , threading , pygame , time , random , sys
+import socket , threading , pygame , time , random , sys , os
 
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
 from const import *
 from game_manager import GameManager, GameState
 from audio import Audio
-from encryption.encryption_manager import *
 from encryption_client import ClientHandshake
+
+
+
+
 
 class Client:
     def __init__(self,ip , port):
@@ -87,15 +92,15 @@ class Client:
             if key == "":
                 key = 'None'
 
-            self.send(f"INPUT|{key}")
+            self.send(f"{INPUT.decode()}{key}")
             self.manager.main_loop()
             clock.tick(FPS)
 
 
     def handle_msg(self, msg):
-        if msg.startswith("STATE"):
+        if msg.startswith(STATE):
             self.manager.game_state = GameState.PLAYING
-            seq_num = int(msg.split("|")[0].replace("STATE",""))
+            seq_num = int(msg.split("|")[0].replace(STATE,""))
             if seq_num < self.last_seq_num:
                 return
             self.last_seq_num = seq_num
@@ -159,7 +164,6 @@ class Client:
             msg = data.decode()
             print(f"got from server -->> {len(msg)}|{msg}")
             self.handle_msg(msg)
-
 
         except socket.error as e:
             print(e)

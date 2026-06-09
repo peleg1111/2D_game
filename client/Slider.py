@@ -1,5 +1,9 @@
 __author__ = 'Peleg Etzioni'
-import pygame
+import pygame, os , sys
+
+sys.path.insert(0, os.path.dirname(__file__))# רשימת הקבצים שimport מחפש בהם קבצים להרצה
+#  מכניס את התיקייה שבה נמצא הקובץ לרשימה כך שimport יוכל למצוא אותו ולהריץ מתוך הcmd
+
 
 class Slider:
     def __init__(self, x, y, width, min_val, max_val, start_val, txt = None):
